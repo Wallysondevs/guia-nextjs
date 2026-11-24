@@ -14,7 +14,7 @@
 <main class="main">
 <div class="content">
 <div class="pager"></div>
-<h1>Performance e Core Web Vitals: LCP, INP e CLS</h1>
+<h1><span class="hl">Performance</span> e Core Web Vitals: LCP, INP e CLS</h1>
 <p class="intro">"Rápido" é subjetivo — o Google mede a experiência real do usuário com três números: <strong>LCP</strong> (quando o maior conteúdo apareceu), <strong>INP</strong> (quanto tempo a página levou para reagir ao clique) e <strong>CLS</strong> (quanto a página pulou de lugar). Nesta aula a Ana aprende a medir esses números no próprio Next.js e a consertar os três pecados mais comuns.</p>
 <div class="note"><strong>Você vai aprender</strong><ul>
 <li>Os 3 Core Web Vitals e os valores "bons" de cada um (LCP &lt; 2.5s, INP &lt; 200ms, CLS &lt; 0.1)</li>
@@ -28,6 +28,9 @@
 <p>Pense numa loja física. O <strong>LCP</strong> é o tempo até a <strong>vitrine principal</strong> estar montada — se a vitrine demora, o cliente vai embora antes de ver nada. No site, a vitrine é a maior imagem/texto acima da dobra; deixe-a com <code>priority</code> no <code>&lt;Image&gt;</code> e a fonte com <code>next/font</code> (sem bloqueio), que o LCP cai.</p>
 <p>O <strong>INP</strong> é o tempo entre o cliente <strong>apontar para um produto</strong> e o atendente reagir. No site, é o clique no botão e a resposta da página. Se o clique dispara um trabalho pesado no mesmo frame (filtrar uma lista gigante, navegar), a página "congela" e o INP piora. A saída é o <code>useTransition</code> (marca a atualização como não urgente) e o streaming/Suspense da aula anterior.</p>
 <p>E o <strong>CLS</strong> é a <strong>prateleira que muda de lugar</strong> enquanto o cliente olha — medida de "estabilidade visual". A causa nº 1 é imagem/fonte sem tamanho reservado: conserte com <code>width</code>/<code>height</code> no <code>&lt;Image&gt;</code> e <code>next/font</code> (aula anterior). Anúncios que empurram conteúdo também entram aqui.</p>
+<h2>Ana e a fila do caixa: a loja é rápida quando ninguém espera</h2>
+<p>A loja da Ana pode ter a vitrine linda, mas se o caixa demora três minutos, o cliente reclama. Na web acontece o mesmo: o <strong>LCP</strong> mede quanto tempo leva para o conteúdo principal aparecer (a vitrine chegando), o <strong>INP</strong> mede se os cliques respondem na hora (o caixa ágil) e o <strong>CLS</strong> mede se a página "pula" enquanto carrega (a prateleira que muda de lugar). Esses três são os <strong>Core Web Vitals</strong> — as três filas do caixa do site.</p>
+<p>A Ana mede no próprio projeto com o <code>next build</code> e com o relatório da Vercel, e corrige o que pesa: imagem grande demais → <code>next/image</code>; JavaScript demais → componentes menores e <code>lazy</code>; fonte que chega tarde → <code>next/font</code>. Performance não é detalhe: é a diferença entre a loja dela e a loja em que o cliente desiste de entrar.</p>
 <h2>Medindo no próprio projeto</h2>
 <pre class="file" data-file="terminal">npm run dev
 # no canto inferior esquerdo da página (modo dev) aparece o selo de velocidade:
@@ -112,7 +115,7 @@ function App() {
     &lt;/div&gt;
   );
 }</pre></div>
-<figure class="tela"><img src="assets/telas/n3-performance.png" alt="Relatório de Core Web Vitals no PageSpeed Insights" width="1280" height="800" loading="lazy"><figcaption>PageSpeed Insights mostra os Core Web Vitals reais (field data) e o score de performance da página.</figcaption></figure>
+<figure class="tela"><img src="assets/telas/performance-1.png" alt="Relatório de Core Web Vitals no PageSpeed Insights" width="1280" height="800" loading="lazy"><figcaption>PageSpeed Insights mostra os Core Web Vitals reais (field data) e o score de performance da página.</figcaption></figure>
 <h2>Quando dá errado</h2>
 <div class="warning"><strong>Erro real de CLS:</strong> a Ana colocou um banner de cookies depois que a página já pintou, e o conteúdo pulou para baixo. O Lighthouse acusa:</div>
 <pre class="out">CLS: 0.25 (ruim) — "Evite grandes mudanças de layout"

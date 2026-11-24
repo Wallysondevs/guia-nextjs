@@ -4,12 +4,15 @@
 <script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 </head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
 <div class="pager"></div>
-<h1>Fontes e imagens</h1>
+<h1><span class="hl">Fontes</span> e imagens</h1>
 <p class="intro">A página da Ana já tem conteúdo e estilo, mas as fontes carregam da internet (e a página "pula" quando a fonte chega) e as imagens estão pesadas demais. O Next.js tem dois componentes专门 para isso: o <code>next/font</code> (fontes otimizadas, baixadas no build e servidas do próprio servidor) e o <code>next/image</code> (imagens que o Next redimensiona, converte para WebP e carrega só quando aparecem na tela).</p>
 <div class="note"><strong>Você vai aprender</strong><ul><li><code>next/font/google</code>: fonte self-hosted automática, sem layout shift, com <code>variable</code> no CSS</li><li><code>next/image</code>: <code>src</code>, <code>width</code>, <code>height</code>, <code>alt</code> obrigatórios</li><li>O que o <code>&lt;Image&gt;</code> faz sozinho: WebP/AVIF, lazy loading, tamanho certo</li><li>Imagens de fora do domínio: configurar <code>remotePatterns</code> no next.config</li><li>Erros reais: Image sem width/height</li></ul></div>
 <hr><h2>A ideia: fonte é entrega em mãos, imagem é correio otimizado</h2>
 <p>Quando você usa uma fonte do Google via <code>&lt;link&gt;</code>, o navegador precisa ir até o Google, baixar a fonte, e só depois pintar o texto — e enquanto isso o texto aparece com a fonte padrão e depois "pula" para a fonte nova. Esse pulo chama-se <strong>layout shift</strong> e é péssimo para o usuário e para o Google. O <code>next/font</code> resolve isso de um jeito elegante: <strong>no momento do build</strong> (<code>npm run build</code> ou ao subir o dev), o Next.js baixa a fonte do Google, salva ela no seu próprio servidor e gera um CSS com <code>@font-face</code> apontando para os arquivos locais. Resultado: a fonte já está no seu servidor, não existe segunda viagem, não existe pulo — o texto já nasce com a fonte certa.</p>
 <p>A imagem é como um correio: se a Ana manda uma caixa de 5kg para alguém que só precisava de 200g, é desperdício. A tag <code>&lt;img&gt;</code> comum manda o arquivo original, seja qual for o tamanho — uma foto de 4MB num celular. O <code>&lt;Image&gt;</code> do Next.js é o correio otimizado: ele olha o tamanho que a imagem vai ocupar na tela, redimensiona na hora, converte para WebP/AVIF (formato mais leve), e só baixa a imagem quando ela está prestes a aparecer na tela (lazy loading). Você declara <code>width</code> e <code>height</code> — o Next usa esses números para reservar o espaço exato antes da imagem chegar, então <strong>a página não pula</strong> quando a foto carrega.</p>
+<h2>Ana escolhe a letra do cardápio e emoldura a foto da parede</h2>
+<p>No restaurante da Ana, a letra do cardápio faz toda a diferença: uma letra elegante passa a sensação de lugar caprichado. A <strong>fonte</strong> (<code>next/font</code>) é isso — ela baixa a fonte no build, hospeda no próprio servidor e entrega sem o navegador precisar ir ao Google Fonts buscar. Já a <strong>imagem</strong> é a foto emoldurada na parede: a moldura certa (<code>width</code>/<code>height</code>) reserva o lugar dela e a foto não "pula" quando carrega.</p>
+<p>O <code>next/image</code> é o emoldrador profissional: ele redimensiona a foto para o tamanho certo, converte para WebP/AVIF (arquivo leve) e só carrega quando a foto vai aparecer na tela (lazy). A Ana ganha velocidade de página e nota boa nos Core Web Vitals sem fazer nada na mão.</p>
 <h2>Fonte com next/font/google</h2>
 <pre class="file" data-file="app/layout.jsx">import "./globals.css";
 import { Inter } from "next/font/google";
@@ -45,8 +48,29 @@ export default function Home() {
   },
 };
 export default nextConfig;</pre>
-<figure class="tela"><img src="assets/telas/fontes-imagens.png" alt="Página com título grande na fonte Inter e uma imagem otimizada pelo next/image, com a lista do que o Image faz sozinho" width="1280" height="800" loading="lazy"><figcaption>Página com <code>next/font</code> (título na Inter, sem pulo) e <code>next/image</code> (imagem redimensionada e em lazy loading).</figcaption></figure>
+<figure class="tela"><img src="assets/telas/fontes-imagens-1.png" alt="Página com título grande na fonte Inter e uma imagem otimizada pelo next/image, com a lista do que o Image faz sozinho" width="1280" height="800" loading="lazy"><figcaption>Página com <code>next/font</code> (título na Inter, sem pulo) e <code>next/image</code> (imagem redimensionada e em lazy loading).</figcaption></figure>
 <div class="table-wrap"><table class="ref"><tr><th>Prop</th><th>Obrigatória?</th><th>Pra que serve</th></tr><tr><td><code>src</code></td><td>✅</td><td>Caminho da imagem (<code>/foto.png</code> de public/) ou URL externa liberada</td></tr><tr><td><code>width</code> / <code>height</code></td><td>✅ (ou <code>fill</code>)</td><td>Reserva o espaço e define o redimensionamento — evita layout shift</td></tr><tr><td><code>alt</code></td><td>✅</td><td>Texto alternativo (acessibilidade + SEO)</td></tr><tr><td><code>fill</code></td><td>alternativa</td><td>Ocupa o container relativo (substitui width/height)</td></tr><tr><td><code>priority</code></td><td>não</td><td>Carrega junto com a página (use no logo/hero, sem lazy)</td></tr></table></div>
+<div class="tryreact" data-goal="Foto da Ana">
+<p class="try-task"><strong>Missão:</strong> a imagem está sem texto alternativo — e o <code>next/image</code> <em>exige</em> o atributo <code>alt</code>. Adicione <code>alt="Foto da Ana"</code> na tag <code>&lt;img&gt;</code>. Rode ▶ e ✔.</p>
+<pre class="script" data-file="App.jsx">function App() {
+  return (
+    &lt;div style={{ padding: 20, fontFamily: "Georgia, serif" }}&gt;
+      &lt;h1 style={{ fontFamily: "monospace" }}&gt;Portfólio da Ana&lt;/h1&gt;
+      &lt;img src="https://picsum.photos/300/150" width="300" height="150" /&gt;
+      &lt;p&gt;next/font troca a fonte; next/image otimiza a imagem.&lt;/p&gt;
+    &lt;/div&gt;
+  );
+}</pre>
+<pre class="solucao" data-file="App.jsx">function App() {
+  return (
+    &lt;div style={{ padding: 20, fontFamily: "Georgia, serif" }}&gt;
+      &lt;h1 style={{ fontFamily: "monospace" }}&gt;Portfólio da Ana&lt;/h1&gt;
+      &lt;img src="https://picsum.photos/300/150" width="300" height="150" alt="Foto da Ana" /&gt;
+      &lt;p&gt;next/font troca a fonte; next/image otimiza a imagem.&lt;/p&gt;
+    &lt;/div&gt;
+  );
+}</pre>
+</div>
 <h2>Quando dá errado</h2>
 <div class="warning"><strong>Erro:</strong> a Ana usou <code>&lt;Image&gt;</code> sem width/height e o Next.js recusou:</div>
 <pre class="out">Error: Image with src "/foto.png" is missing required "width" property.

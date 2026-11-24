@@ -4,13 +4,16 @@
 <script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 </head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
 <div class="pager"></div>
-<h1>Formulário completo com Server Action</h1>
+<h1>Formulário completo com <span class="hl">Server Action</span></h1>
 <p class="intro">A Ana 👩‍💻 fez a página de contato dela: nome, e-mail e mensagem. Ela queria que, ao enviar vazio, cada campo mostrasse o erro <strong>ao lado dele</strong>, sem perder o que já foi digitado, e que o botão virasse "Enviando…" enquanto a action rodava no servidor. Nesta página você monta esse formulário inteiro, do zero ao deploy mental.</p>
 <div class="note"><strong>Você vai aprender</strong><ul><li>Separar a action em arquivo próprio (<code>actions.js</code>) e a validação dentro dela</li><li>Devolver um objeto de erros por campo: <code>{ erros: { nome: "…" } }</code></li><li><code>useActionState</code> ligando o formulário à action</li><li>Manter os valores digitados com <code>defaultValue</code> + estado</li><li><code>useFormStatus</code> no botão filho + <code>revalidatePath</code> no fim</li></ul></div>
 <hr><h2>A ideia: o check-in de aeroporto com bilete de erro por campo</h2>
 <p>No check-in de aeroporto, o atendente confere cada documento na hora: passaporte? bagagem? passagem? Se falta alguma coisa, ele devolve <strong>aquele item específico</strong> com uma etiqueta de erro — você não perde os outros documentos, só corrige o que falta. A Server Action de formulário funciona igual: ela valida campo por campo no servidor e devolve um objeto <code>erros</code> com uma chave por campo. O cliente não revalida nada — a lógica pesada fica no servidor, onde mora o banco.</p>
 <p>E por que o que você digitou não some? Porque o formulário é reenviado pelo navegador com os valores, e você reaplica com <code>defaultValue</code> vindo do estado. Já o botão "Enviando…" é pura leitura: o <code>useFormStatus</code>, num componente filho do <code>&lt;form&gt;</code>, enxerga o <code>pending</code> do envio e troca o texto do botão sozinho.</p>
 <p>Fluxo completo: <code>submit</code> → navegador faz POST para a action → action valida → devolve <code>{ ok, erros }</code> → <code>useActionState</code> guarda isso no <code>state</code> → a página re-renderiza mostrando os erros ao lado dos campos → se deu certo, a action chama <code>revalidatePath</code> e <code>redirect</code>.</p>
+<h2>Ana e o totem de pedido do fast-food: você preenche, a cozinha recebe direto</h2>
+<p>No fast-food novo, a Ana preenche o pedido num totem e o pedido <strong>vai direto para a cozinha</strong> — ela não leva um papel até o balcão. Uma <strong>Server Action</strong> é esse totem: o formulário da página chama uma função que roda <em>no servidor</em>, como se a Ana levasse o pedido até a cozinha sem sair do lugar. O navegador não processa nada além de enviar — e a página pode atualizar sozinha depois, sem reload.</p>
+<p>A validação acontece do lado de verdade: se o e-mail da Ana ficou sem <code>@</code>, a action devolve o erro e o formulário mostra a mensagem na hora. É o totem dizendo "e-mail inválido" na hora, em vez de a Ana descobrir em casa que o pedido não chegou.</p>
 <h2>A action com validação (lado do servidor)</h2>
 <pre class="file" data-file="app/contato/actions.js">"use server";
 
@@ -135,7 +138,7 @@ export default function ContatoForm() {
     &lt;/div&gt;
   );
 }</pre></div>
-<figure class="tela"><img src="assets/telas/formularios-actions.png" alt="Formulário de contato com useActionState, erros por campo e botão Enviando…" width="1280" height="800" loading="lazy"><figcaption>A action valida no servidor e devolve <code>erros</code> por campo; o <code>useActionState</code> mostra cada erro ao lado do input, e o botão sente o <code>pending</code> sozinho.</figcaption></figure>
+<figure class="tela"><img src="assets/telas/formularios-actions-1.png" alt="Formulário de contato com useActionState, erros por campo e botão Enviando…" width="1280" height="800" loading="lazy"><figcaption>A action valida no servidor e devolve <code>erros</code> por campo; o <code>useActionState</code> mostra cada erro ao lado do input, e o botão sente o <code>pending</code> sozinho.</figcaption></figure>
 <h2>Quando dá errado</h2>
 <div class="warning"><strong>Erro:</strong> usar <code>useFormStatus</code> no mesmo componente do <code>&lt;form&gt;</code> — ele não enxerga o próprio form:</div>
 <pre class="out">Error: useFormStatus must be used inside a component rendered within a &lt;form&gt;.

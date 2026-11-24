@@ -4,7 +4,7 @@
 <script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 </head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
 <div class="pager"></div>
-<h1>O que é o Next.js</h1>
+<h1>O que é o <span class="hl">Next.js</span></h1>
 <p class="intro">Ana instalou o React no computador e criou componentes lindos — mas toda página recarregava inteiro a cada clique, o Google não enxergava o conteúdo, e ela descobriu que React sozinho só cuida da <em>camada visual</em>. Nesta página você vai entender o que o Next.js adiciona por cima do React e por que ele virou o padrão para aplicações web em 2025.</p>
 <div class="note"><strong>Você vai aprender</strong><ul><li>O que é um framework <em>fullstack</em> e por que o Next.js é um</li><li>O que o Next.js adiciona ao React: servidor, rotas, SSR, otimizações</li><li>A história do Next.js: de 2016 até o Next.js 15</li><li>Quando faz sentido usar Next.js (e quando React puro basta)</li></ul></div>
 <hr><h2>A ideia: React é o motor, Next.js é o carro inteiro</h2>
@@ -12,6 +12,9 @@
 <p>O Next.js entra como a montadora que pega esse motor e constrói o carro completo ao redor dele. Ele foi criado por Guillermo Rauch em 2016 (hoje na empresa Vercel) exatamente com essa visão: <strong>você escreve componentes React como sempre escreveu, e o Next entrega uma aplicação completa</strong> — com rotas automáticas, servidor embutido, páginas que chegam prontas no navegador, imagens que carregam sozinhas no tamanho certo e deploy com um comando. Você não precisa montar peça por peça: o carro já sai de fábrica com GPS, ar-condicionado e seguro.</p>
 <p>Isso é o que chamamos de <strong>framework fullstack</strong>: "full" porque cobre as duas pontas — o <em>front</em> (o que o usuário vê no navegador) e o <em>back</em> (o servidor que busca dados, consulta o banco e prepara a página); "stack" porque é um conjunto de ferramentas empilhadas que funcionam juntas. Em vez de você instalar dez bibliotecas diferentes e encaixar tudo na mão (roteador aqui, servidor ali, otimizador de imagem acolá), o Next.js já traz tudo isso.testado e integrado. A consecuencia prática: você cria um arquivo chamado <code>app/page.jsx</code> e, só por causa do nome e do lugar desse arquivo, ele vira a página inicial do seu site. É o que chamamos de <strong>rotas por convenção</strong>.</p>
 <div class="table-wrap"><table class="ref"><tr><th>Época</th><th>Marco</th><th>O que mudou</th></tr><tr><td>2016</td><td>Next.js 1.0</td><td>Lançado por Guillermo Rauch (Vercel): SSR fácil em cima do React, rotas por arquivo na pasta <code>pages/</code></td></tr><tr><td>2020</td><td>Next.js 9/10</td><td>Otimização automática de imagens (<code>next/image</code>), fontes e scripts;Commerce e grandes sites adotam em massa</td></tr><tr><td>2022</td><td>Next.js 13</td><td>Chega o <strong>App Router</strong> (pasta <code>app/</code>) com React Server Components</td></tr><tr><td>2023</td><td>Next.js 14</td><td>App Router vira o padrão estável; Turbopack acelera o servidor de desenvolvimento</td></tr><tr><td>2024</td><td>Next.js 15</td><td>Suporte ao React 19, cache mais previsível e mejoras de performance; hoje é a versão recomendada</td></tr></table></div>
+<h2>Ana aluga um carro completo em vez de comprar só o motor</h2>
+<p>A Ana já dirigia bem — sabia acelerar, frear e estacionar (isso é o React: ela já fazia páginas que reagiam sozinhas). Mas quando precisou de um carro de verdade para viajar, ela não quis comprar só o motor e inventar o resto: ela <strong>alugou o carro completo</strong>, com volante, documentação, seguro e revisão em dia. O Next.js é esse carro completo sobre o motor React.</p>
+<p>As peças que o carro entrega pronto são exatamente as que deixavam a Ana travada: <strong>rotas prontas</strong> (cada pasta com <code>page.jsx</code> vira uma URL), <strong>renderização no servidor</strong> (o Google enxerga o conteúdo), imagens e fontes otimizadas, e deploy em um clique. Ela continua escrevendo componentes React — o motor que ela já conhecia — mas agora com o carro inteiro ao redor.</p>
 <h2>O mesmo componente, dois mundos</h2>
 <p>Olha só a diferença. Em um projeto React puro (criado com Vite, por exemplo), este componente existe, mas alguém precisa configurar rota, servidor e build para ele aparecer na internet:</p>
 <pre class="file" data-file="src/App.jsx">// React puro: um componente solto, sem rota e sem servidor
@@ -24,12 +27,22 @@ export default function Saudacao() {
 export default function Home() {
   return &lt;h1&gt;Olá, mundo!&lt;/h1&gt;;
 }</pre>
-<div class="tryreact" data-goal="Olá, Ana"><p class="try-task"><strong>Missão:</strong> edite o componente abaixo para ele mostrar <strong>"Olá, Ana!"</strong> no lugar de "Olá, mundo!" e aperte ▶ Rodar.</p><pre class="script" data-file="App.jsx">export default function Saudacao() {
+<div class="tryreact" data-goal="Olá, Ana"><p class="try-task"><strong>Missão:</strong> edite o componente abaixo para ele mostrar <strong>"Olá, Ana!"</strong> no lugar de "Olá, mundo!" e aperte ▶ Rodar.</p><pre class="script" data-file="App.jsx">function Saudacao() {
   return &lt;h1&gt;Olá, mundo!&lt;/h1&gt;;
-}</pre><pre class="solucao" data-file="App.jsx">export default function Saudacao() {
+}
+
+function App() {
+  return &lt;Saudacao /&gt;;
+}
+</pre><pre class="solucao" data-file="App.jsx">function Saudacao() {
   return &lt;h1&gt;Olá, Ana!&lt;/h1&gt;;
-}</pre></div>
-<figure class="tela"><img src="assets/telas/o-que-e-nextjs.png" alt="Página inicial do site nextjs.org mostrando o slogan The React Framework for the Web" width="1280" height="800" loading="lazy"><figcaption>A página inicial do nextjs.org: "The React Framework for the Web" — o Next.js se posiciona exatamente como o carro completo em cima do motor React.</figcaption></figure>
+}
+
+function App() {
+  return &lt;Saudacao /&gt;;
+}
+</pre></div>
+<figure class="tela"><img src="assets/telas/o-que-e-nextjs-1.png" alt="Página inicial do site nextjs.org mostrando o slogan The React Framework for the Web" width="1280" height="800" loading="lazy"><figcaption>A página inicial do nextjs.org: "The React Framework for the Web" — o Next.js se posiciona exatamente como o carro completo em cima do motor React.</figcaption></figure>
 <h2>Quando dá errado</h2>
 <p>Um erro clássico de quem está começando no Next.js é usar <code>window</code> ou <code>document</code> direto no corpo do componente. Lembra: no Next.js, <strong>seu componente roda primeiro no servidor</strong>, e no servidor não existe janela nem documento — existe só Node.js. O erro real que aparece no terminal é:</p>
 <div class="warning"><strong>Erro:</strong> tente usar <code>window.location.href</code> dentro de um componente do Next.js sem marcar "use client" e sem proteger a execução:</div>

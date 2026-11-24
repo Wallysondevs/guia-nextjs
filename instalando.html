@@ -4,7 +4,7 @@
 <script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 </head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
 <div class="pager"></div>
-<h1>Instalando Node e npm</h1>
+<h1>Instalando <span class="hl">Node</span> e npm</h1>
 <p class="intro">Antes de criar qualquer projeto, a Ana precisa de duas ferramentas no computador: o <strong>Node.js</strong> (o ambiente que roda JavaScript fora do navegador — é ele quem executa o servidor do Next.js) e o <strong>npm</strong> (o gerenciador de pacotes, que baixa as dependências). Nesta página você instala os dois e confere se deu certo.</p>
 <div class="note"><strong>Você vai aprender</strong><ul><li>Qual versão do Node.js o Next.js 15 exige (18.18+ ou 20+, recomendado 20 LTS)</li><li>Como instalar pelo site oficial nodejs.org (Linux, macOS e Windows)</li><li>Como usar o nvm para trocar de versão facilmente (opcional)</li><li>Como conferir a instalação com <code>node -v</code> e <code>npm -v</code></li></ul></div>
 <hr><h2>A ideia: o Node é a tomada, o npm é a loja de material elétrico</h2>
@@ -21,8 +21,31 @@ ana@notebook:~$ npm -v
 10.9.2
 ana@notebook:~$ npx -v
 10.9.2</pre>
-<figure class="tela"><img src="assets/telas/instalando.png" alt="Terminal mostrando os comandos node -v e npm -v retornando v20.18.1 e 10.9.2" width="1280" height="800" loading="lazy"><figcaption>Depois de instalar, <code>node -v</code> e <code>npm -v</code> precisam responder com números de versão — se aparecer isso, está tudo pronto.</figcaption></figure>
+<figure class="tela"><img src="assets/telas/instalando-1.png" alt="Terminal mostrando os comandos node -v e npm -v retornando v20.18.1 e 10.9.2" width="1280" height="800" loading="lazy"><figcaption>Depois de instalar, <code>node -v</code> e <code>npm -v</code> precisam responder com números de versão — se aparecer isso, está tudo pronto.</figcaption></figure>
 <div class="tip"><strong>Dica (opcional):</strong> instale o <strong>nvm</strong> (Node Version Manager) em <code>https://github.com/nvm-sh/nvm</code>. Com ele, a Ana troca de versão com <code>nvm install 20</code> e <code>nvm use 20</code> — útil quando um projeto antigo exige Node 16 e o novo exige Node 20.</div>
+<div class="tryreact" data-goal="v20\.18\.1">
+<p class="try-task"><strong>Missão:</strong> o terminal mostra uma versão antiga demais para o Next.js 15. Troque <code>v16.20.2</code> por <code>v20.18.1</code> e <code>8.19.4</code> por <code>10.9.2</code> (Node 20 LTS + npm 10). Rode ▶ e ✔.</p>
+<pre class="script" data-file="App.jsx">function App() {
+  return (
+    &lt;div style={{ background: "#111", color: "#0f0", fontFamily: "monospace", padding: 16, lineHeight: 1.7 }}&gt;
+      &lt;div&gt;ana@notebook:~$ node -v&lt;/div&gt;
+      &lt;div&gt;v16.20.2&lt;/div&gt;
+      &lt;div&gt;ana@notebook:~$ npm -v&lt;/div&gt;
+      &lt;div&gt;8.19.4&lt;/div&gt;
+    &lt;/div&gt;
+  );
+}</pre>
+<pre class="solucao" data-file="App.jsx">function App() {
+  return (
+    &lt;div style={{ background: "#111", color: "#0f0", fontFamily: "monospace", padding: 16, lineHeight: 1.7 }}&gt;
+      &lt;div&gt;ana@notebook:~$ node -v&lt;/div&gt;
+      &lt;div&gt;v20.18.1&lt;/div&gt;
+      &lt;div&gt;ana@notebook:~$ npm -v&lt;/div&gt;
+      &lt;div&gt;10.9.2&lt;/div&gt;
+    &lt;/div&gt;
+  );
+}</pre>
+</div>
 <h2>Quando dá errado</h2>
 <p>O erro mais comum é o terminal não encontrar o comando depois da instalação:</p>
 <div class="warning"><strong>Erro:</strong> digitar <code>node -v</code> e o terminal responder que o comando não existe:</div>

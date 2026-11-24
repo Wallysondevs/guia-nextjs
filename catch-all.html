@@ -4,13 +4,16 @@
 <script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 </head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
 <div class="pager"></div>
-<h1>Catch-all <code>[...slug]</code></h1>
+<h1><span class="hl">Catch-all</span> <code>[...slug]</code></h1>
 <p class="intro">A Ana 👩‍💻 documentou o projeto dela em pastas aninhadas: <code>/docs/instalacao/rapida</code>, <code>/docs/rotas/dinamicas</code>, <code>/docs/api/route</code>… Criar uma página para cada combinação seria um pesadelo. A saída foi o <strong>catch-all</strong>: uma pasta <code>[...slug]</code> que "pega tudo" o que vier depois, como um aspirador de URL.</p>
 <div class="note"><strong>Você vai aprender</strong><ul><li>A diferença entre <code>[id]</code> (um segmento) e <code>[...slug]</code> (vários segmentos)</li><li>Como <code>params.slug</code> vira um <em>array</em> de strings</li><li>O catch-all opcional <code>[[...slug]]</code> — por que <code>/docs</code> também funciona</li><li>Montar breadcrumbs a partir do slug</li></ul></div>
 <hr><h2>A ideia: o aspirador de URLs</h2>
 <p>Pense numa rota dinâmica comum, <code>/blog/[id]</code>: ela captura <strong>exatamente um</strong> pedaço da URL — <code>/blog/42</code> funciona, mas <code>/blog/2025/abril</code> não. Já o catch-all <code>[...slug]</code> é como um aspirador ligado na ponta da URL: tudo o que vier depois do prefixo ele engole de uma vez e entrega como uma <strong>lista</strong>. Em <code>/docs/a/b/c</code>, o aspirador devolve <code>["a", "b", "c"]</code>.</p>
 <p>Essa lista é a chave de tudo: com ela você monta breadcrumbs ("docs / a / b / c"), acha o arquivo certo num sistema de docs estilo wiki, ou valida cada nível. O nome <code>slug</code> é só tradição — pode ser <code>[...caminho]</code>, <code>[...partes]</code>, o que fizer sentido no seu projeto.</p>
 <p>Existe ainda a versão <strong>opcional</strong>, com colchetes duplos: <code>[[...slug]]</code>. Ela é o aspirador que também deixa o caminho vazio passar — ou seja, <code>/docs</code> (sem nada depois) também cai nessa página, com <code>slug = []</code>. É a diferença entre "precisa ter pelo menos um item" e "pode ser vazio".</p>
+<h2>Ana e o corredor com várias portas: uma página só para todas as URLs?</h2>
+<p>Imagine um corredor longo com dez portas numeradas: <code>/docs/instalacao</code>, <code>/docs/api</code>, <code>/docs/faq</code>… A Ana poderia criar dez arquivos <code>page.jsx</code>, um para cada porta. Mas e se amanhã forem cem portas? É aí que entra o <strong>catch-all</strong> <code>[...slug]</code>: como um <strong>corredor único com uma única porta de entrada</strong> que recebe o caminho inteiro de uma vez (<code>['docs','api']</code>) e decide o que mostrar.</p>
+<p>A regra prática da Ana: use <code>[id]</code> quando a rota tem <strong>um</strong> segmento variável (um post, um produto); use <code>[...slug]</code> quando a URL tem <strong>vários</strong> segmentos e você quer tratar todos no mesmo lugar — documentação, páginas de ajuda, qualquer coisa com cara de "várias subpáginas".</p>
 <h2>Na prática: documentação em uma página só</h2>
 <p>Crie <code>app/docs/[...slug]/page.jsx</code>. O <code>params.slug</code> chega como array de strings — lembre-se do <code>await</code>:</p>
 <pre class="file" data-file="app/docs/[...slug]/page.jsx">import Link from "next/link";
@@ -88,7 +91,7 @@ export default async function DocPage({ params }) {
     &lt;/div&gt;
   );
 }</pre></div>
-<figure class="tela"><img src="assets/telas/catch-all.png" alt="Página de documentação com catch-all [...slug] mostrando breadcrumb docs / instalacao / rapida" width="1280" height="800" loading="lazy"><figcaption>Com <code>[[...slug]]</code>, tanto <code>/docs</code> quanto <code>/docs/instalacao/rapida</code> caem na mesma página — o <code>slug</code> chega como array.</figcaption></figure>
+<figure class="tela"><img src="assets/telas/catch-all-1.png" alt="Página de documentação com catch-all [...slug] mostrando breadcrumb docs / instalacao / rapida" width="1280" height="800" loading="lazy"><figcaption>Com <code>[[...slug]]</code>, tanto <code>/docs</code> quanto <code>/docs/instalacao/rapida</code> caem na mesma página — o <code>slug</code> chega como array.</figcaption></figure>
 <h2>Quando dá errado</h2>
 <div class="warning"><strong>Erro:</strong> tratar <code>slug</code> como string. É comum, principalmente quem vem de <code>[id]</code>, fazer <code>slug.toUpperCase()</code> ou <code>/docs/${slug}</code> achando que é texto — mas no catch-all ele é um <em>array</em>:</div>
 <pre class="out">TypeError: slug.toUpperCase is not a function

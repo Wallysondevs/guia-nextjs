@@ -4,14 +4,17 @@
 <script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 </head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
 <div class="pager"></div>
-<h1>Props</h1>
+<h1><span class="hl">Props</span></h1>
 <p class="intro">O componente <code>&lt;Header /&gt;</code> da Ana está igual em todas as páginas — mas e se ela quiser que o título da página mude ("Início", "Sobre")? É aí que entram as <strong>props</strong>: valores que o componente pai passa para o filho, como argumentos de uma função. Nesta página você vai aprender a sintaxe e a regra de ouro entre Server e Client Components.</p>
 <div class="note"><strong>Você vai aprender</strong><ul><li>Sintaxe: <code>&lt;Saudacao nome="Ana" /&gt;</code> no pai, <code>{ nome }</code> no filho</li><li>Desestruturação: <code>function Saudacao({ nome, idade })</code></li><li>Props com valor JS: aspas para texto, chaves para número/expressão: <code>idade={20}</code></li><li>Props entre Server → Client: só valores serializáveis (texto, número, objeto, array)</li><li>❌ Server não pode passar função para Client (erro real)</li><li>Props só descem (pai → filho); o filho não altera as props</li></ul></div>
 <hr><h2>A ideia: props são bilhetes que o pai cola na mão do filho</h2>
 <p>Imagine que a Ana (o componente <em>pai</em>) vai mandar o filho (o componente <em>filho</em>) numa tarefa: "leva esse bilhete para a padaria". O bilhete é a <strong>prop</strong>: um valor que o pai entrega para o filho usar. No código, o pai escreve <code>&lt;Saudacao nome="Ana" /&gt;</code> — como se colocasse um bilhetinho escrito <code>nome: "Ana"</code> na mão do componente <code>Saudacao</code>. Dentro do filho, a função recebe esse bilhete desempacotado: <code>function Saudacao({ nome })</code> — e usa <code>{nome}</code> no JSX. Simples assim: <strong>o pai manda, o filho recebe e usa</strong>.</p>
 <p>Tem uma regrinha de sintaxe importante: texto vai entre aspas (<code>nome="Ana"</code>), mas número, variável ou expressão vai entre chaves (<code>idade={20}</code>, <code>ano={2025}</code>, <code>dobro={n * 2}</code>). As chaves são a janelinha do JSX de novo — tudo que é JavaScript entra nelas.</p>
 <p>E a regra de ouro entre Server e Client: quando um <strong>Server Component manda props para um Client Component</strong>, esses valores atravessam a "fronteira" entre servidor e navegador — eles viram JSON no meio do caminho. Então só dá para passar o que existe em JSON: <strong>string, número, booleano, null, array e objeto</strong>. <strong>Função não existe em JSON</strong>, então passar um <code>onClick={minhaFuncao}</code> de um Server Component para um Client Component dá erro. (Client → Client pode passar função à vontade.)</p>
-<figure class="tela"><img src="assets/telas/props.png" alt="Diagrama: componente Pai passando nome=Ana e nome=Bruno por setas para o componente Filho Saudacao, que renderiza Olá, Ana! e Olá, Bruno!" width="1280" height="800" loading="lazy"><figcaption>O mesmo componente <code>Saudacao</code> renderizando duas vezes com props diferentes — é o poder da reutilização.</figcaption></figure>
+<figure class="tela"><img src="assets/telas/props-1.png" alt="Diagrama: componente Pai passando nome=Ana e nome=Bruno por setas para o componente Filho Saudacao, que renderiza Olá, Ana! e Olá, Bruno!" width="1280" height="800" loading="lazy"><figcaption>O mesmo componente <code>Saudacao</code> renderizando duas vezes com props diferentes — é o poder da reutilização.</figcaption></figure>
+<h2>Ana e o bilhetinho na lancheira: o pai entrega, o filho só lê</h2>
+<p>Toda manhã o pai da Ana coloca um bilhetinho na lancheira dela: <strong>"hoje tem excursão, leve o casaco"</strong>. A Ana (filha) só <em>lê</em> o bilhete — ela não pode reescrever o que o pai escreveu, porque a lancheira é dele. Uma <strong>prop</strong> é esse bilhete: o componente pai entrega um valor (<code>nome="Ana"</code>) e o componente filho usa (<code>{nome}</code>) — <strong>somente leitura</strong>, como um bilhete que não se apaga.</p>
+<p>Se o filho quiser mudar alguma coisa, ele não rasura o bilhete — ele <strong>pede para o pai</strong> (chama a função passada por prop, o famoso callback) ou guarda uma cópia no próprio bolso (estado interno). Essa é a regra de ouro das props: <em>dados descem, eventos sobem</em> — o que mantém os componentes da Ana previsíveis como uma lancheira bem organizada.</p>
 <h2>Exemplo completo: Saudacao</h2>
 <pre class="file" data-file="components/Saudacao.jsx">// O filho: recebe as props desempacotadas no parâmetro
 export default function Saudacao({ nome, idade }) {
@@ -33,7 +36,7 @@ export default function Home() {
   );
 }</pre>
 <p>Resultado na tela: <strong>Olá, Ana! Você tem 20 anos.</strong> e <strong>Olá, Bruno! Você tem 31 anos.</strong> — mesmo componente, dados diferentes. Repare: <code>nome="Ana"</code> (texto, com aspas) e <code>idade={20}</code> (número, com chaves).</p>
-<div class="tryreact" data-goal="nome"><p class="try-task"><strong>Missão:</strong> crie um componente <code>Saudacao</code> que recebe a prop <code>nome</code> e mostre <code>&lt;Saudacao nome="Ana" /&gt;</code> no App. Aperte ▶ Rodar.</p><pre class="script" data-file="App.jsx">export default function App() {
+<div class="tryreact" data-goal="nome"><p class="try-task"><strong>Missão:</strong> crie um componente <code>Saudacao</code> que recebe a prop <code>nome</code> e mostre <code>&lt;Saudacao nome="Ana" /&gt;</code> no App. Aperte ▶ Rodar.</p><pre class="script" data-file="App.jsx">function App() {
   return (
     &lt;main&gt;
       &lt;p&gt;crie o componente Saudacao aqui&lt;/p&gt;
@@ -43,7 +46,7 @@ export default function Home() {
   return &lt;h1&gt;Olá, {nome}!&lt;/h1&gt;;
 }
 
-export default function App() {
+function App() {
   return (
     &lt;main&gt;
       &lt;Saudacao nome="Ana" /&gt;

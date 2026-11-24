@@ -14,7 +14,7 @@
 <main class="main">
 <div class="content">
 <div class="pager"></div>
-<h1>Referência: estrutura de pastas do App Router (app/)</h1>
+<h1>Referência: <span class="hl">estrutura de pastas</span> do App Router (app/)</h1>
 <p class="intro">No Next.js com App Router, <strong>pasta é rota e arquivo é comportamento</strong>. Esta página é o mapa da cidade: cada pasta especial (<code>[id]</code>, <code>(grupo)</code>, <code>@paralela</code>, <code>_privada</code>) e cada arquivo (<code>page.jsx</code>, <code>layout.jsx</code>, <code>loading.jsx</code>…) tem um papel fixo. Consulte aqui quando a rota não abre ou o layout não aplica.</p>
 <div class="note"><strong>Você vai aprender</strong><ul>
 <li>Arquivos de rota: <code>page</code>, <code>layout</code>, <code>template</code>, <code>loading</code>, <code>error</code>, <code>not-found</code>, <code>route</code>, <code>default</code></li>
@@ -105,7 +105,7 @@ function App() {
     &lt;/div&gt;
   );
 }</pre></div>
-<figure class="tela"><img src="assets/telas/ref-estructura.png" alt="Estrutura de pastas do app/ no editor" width="1280" height="800" loading="lazy"><figcaption>A pasta app/ é o mapa das rotas: cada page.jsx vira uma URL; arquivos especiais controlam layout, loading e erros.</figcaption></figure>
+<figure class="tela"><img src="assets/telas/ref-estructura-1.png" alt="Estrutura de pastas do app/ no editor" width="1280" height="800" loading="lazy"><figcaption>A pasta app/ é o mapa das rotas: cada page.jsx vira uma URL; arquivos especiais controlam layout, loading e erros.</figcaption></figure>
 <h2>Quando dá errado</h2>
 <div class="warning"><strong>Clássico:</strong> a rota não existe e o Next.js devolve 404 mesmo com a pasta criada. Quase sempre esqueceu o <code>page.jsx</code> dentro dela (pasta sem page não é rota) ou o arquivo está com extensão errada (<code>page.js</code> serve, <code>Page.jsx</code> com P maiúsculo não, em alguns sistemas):</div>
 <pre class="out">404 — app/sobre/ existe mas não tem page.jsx

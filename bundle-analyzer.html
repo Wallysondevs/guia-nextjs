@@ -14,7 +14,7 @@
 <main class="main">
 <div class="content">
 <div class="pager"></div>
-<h1>Analisando o bundle: @next/bundle-analyzer e import dinâmico</h1>
+<h1>Analisando o <span class="hl">bundle</span>: @next/bundle-analyzer e import dinâmico</h1>
 <p class="intro">O app da Ana estava "pesado": o primeiro carregamento levava segundos porque uma biblioteca de gráficos entrava junto com a página inicial. Nesta aula você aprende a <strong>enxergar</strong> o que pesa no pacote com o bundle analyzer e a <strong>empurrar</strong> o que é pesado para um carregamento sob demanda com import dinâmico (<code>next/dynamic</code>).</p>
 <div class="note"><strong>Você vai aprender</strong><ul>
 <li>Instalar e configurar o <code>@next/bundle-analyzer</code> (mapeia cada chunk por tamanho)</li>
@@ -27,6 +27,9 @@
 <h2>A ideia: a mala de viagem e o guarda-roupa extra</h2>
 <p>Carregar o bundle inteiro na primeira visita é como <strong>levar a casa inteira na mala</strong>: a mala fica pesada, o avião demora para decolar e você nem usa metade das roupas. O bundle analyzer é a <strong>balança da mala</strong>: ele mostra quanto cada "roupa" (biblioteca) pesa no pacote. O import dinâmico é o <strong>guarda-roupa extra que você aluga no destino</strong>: bibliotecas grandes (gráfico, editor de texto rico, mapa) ficam num chunk separado e só baixam quando a página realmente precisa delas.</p>
 <p>No Next.js, o App Router já separa o código por rota automaticamente (cada página só baixa o que usa). O que sobra para você é tirar do pacote inicial as bibliotecas que <strong>uma minoria das páginas</strong> usa. O <code>next/dynamic</code> faz isso com <code>import()</code> por baixo dos panos: o componente vira um chunk próprio, carregado quando o componente vai aparecer — com um <code>loading</code> no lugar enquanto isso.</p>
+<h2>Ana pesa a mala antes da viagem: quanto JavaScript o navegador realmente baixa?</h2>
+<p>Antes de viajar, a Ana coloca a mala na balança: se passar de 20 kg, paga taxa. O <strong>bundle</strong> do site dela é a mala — todo o JavaScript que o navegador precisa baixar para a página funcionar. E como uma mala, ele pode ficar <strong>pesado demais sem a gente perceber</strong>: cada biblioteca nova entra inteirinha, mesmo que a Ana use só uma função dela.</p>
+<p>O <code>@next/bundle-analyzer</code> é a balança com raio-x: ele abre a mala e mostra <strong>cada pacote e quanto pesa</strong>. Aí a Ana descobre, por exemplo, que uma biblioteca de datas de 300 KB entrou no bundle só porque ela importou uma função — e aí ela troca por <code>React.lazy</code> (carrega só quando precisa) ou por uma alternativa menor, e a mala volta a pesar pouco.</p>
 <h2>Instalando e rodando o analisador</h2>
 <pre class="file" data-file="terminal">npm install @next/bundle-analyzer</pre>
 <pre class="file" data-file="next.config.js">const withBundleAnalyzer = require('@next/bundle-analyzer')({
@@ -103,7 +106,7 @@ function App() {
     &lt;/div&gt;
   );
 }</pre></div>
-<figure class="tela"><img src="assets/telas/n3-bundle.png" alt="Mapa do bundle gerado pelo @next/bundle-analyzer" width="1280" height="800" loading="lazy"><figcaption>O bundle analyzer mostra quanto cada chunk pesa: dá para ver o gráfico inflado o First Load JS do /dashboard.</figcaption></figure>
+<figure class="tela"><img src="assets/telas/bundle-analyzer-1.png" alt="Mapa do bundle gerado pelo @next/bundle-analyzer" width="1280" height="800" loading="lazy"><figcaption>O bundle analyzer mostra quanto cada chunk pesa: dá para ver o gráfico inflado o First Load JS do /dashboard.</figcaption></figure>
 <h2>Quando dá errado</h2>
 <div class="warning"><strong>Erro real:</strong> usar <code>dynamic(..., { ssr: false })</code> dentro de um <strong>Server Component</strong>. O Next.js proíbe na hora — <code>ssr: false</code> só vale em Client Component:</div>
 <pre class="out">Error: ssr: false is not allowed with next/dynamic in Server Components.

@@ -1,0 +1,49 @@
+# lista-fotos.txt — fotos REAIS a gerar, geradas por ferramentas/gerar-fotos.sh
+# Formato: <arquivo da foto em assets/telas/>  ->  <código fonte do app React>
+# Cada app é um HTML com React UMD + Babel (ferramentas/vendor/) + shims de next/*
+# + o código extraído da página (pre.script da caixa tryreact, ou pre.file).
+# Para gerar as fotos: ferramentas/gerar-fotos.sh
+
+assets/telas/api-routes-1.png  ->  ferramentas/apps/api-routes-1/index.html   # status|json|erro
+assets/telas/app-vs-pages-1.png  ->  ferramentas/apps/app-vs-pages-1/index.html   # app/sobre/page\.jsx
+assets/telas/bundle-analyzer-1.png  ->  ferramentas/apps/bundle-analyzer-1/index.html   # React.lazy
+assets/telas/cache-revalidate-1.png  ->  ferramentas/apps/cache-revalidate-1/index.html   # delete|invalida|limpa|remove
+assets/telas/catch-all-1.png  ->  ferramentas/apps/catch-all-1/index.html   # join\(
+assets/telas/componentes-1.png  ->  ferramentas/apps/componentes-1/index.html   # Header
+assets/telas/cookies-sessoes-1.png  ->  ferramentas/apps/cookies-sessoes-1/index.html   # httpOnly|delete|set\(
+assets/telas/criar-projeto-1.png  ->  ferramentas/apps/criar-projeto-1/index.html   # app-da-ana
+assets/telas/dominio-custom-1.png  ->  ferramentas/apps/dominio-custom-1/index.html   # https
+assets/telas/estados-especiais-1.png  ->  ferramentas/apps/estados-especiais-1/index.html   # tentativas|tentar|reset|catch
+assets/telas/estilos-css-1.png  ->  ferramentas/apps/estilos-css-1/index.html   # backgroundColor
+assets/telas/estrutura-pastas-1.png  ->  ferramentas/apps/estrutura-pastas-1/index.html   # blog/
+assets/telas/fetch-server-component-1.png  ->  ferramentas/apps/fetch-server-component-1/index.html   # post\.titulo
+assets/telas/fontes-imagens-1.png  ->  ferramentas/apps/fontes-imagens-1/index.html   # Foto da Ana
+assets/telas/formularios-actions-1.png  ->  ferramentas/apps/formularios-actions-1/index.html   # erros|erro
+assets/telas/generateStaticParams-1.png  ->  ferramentas/apps/generateStaticParams-1/index.html   # map\(
+assets/telas/grupos-rotas-1.png  ->  ferramentas/apps/grupos-rotas-1/index.html   # grupo ===|grupo ==
+assets/telas/image-font-1.png  ->  ferramentas/apps/image-font-1/index.html   # sizes=
+assets/telas/index-1.png  ->  ferramentas/apps/index-1/index.html   # Somar \+1
+assets/telas/instalando-1.png  ->  ferramentas/apps/instalando-1/index.html   # v20\.18\.1
+assets/telas/layout-1.png  ->  ferramentas/apps/layout-1/index.html   # Site da Ana
+assets/telas/middleware-1.png  ->  ferramentas/apps/middleware-1/index.html   # redirect|bloque|401|login
+assets/telas/navegacao-link-1.png  ->  ferramentas/apps/navegacao-link-1/index.html   # contato
+assets/telas/o-que-e-nextjs-1.png  ->  ferramentas/apps/o-que-e-nextjs-1/index.html   # Olá, Ana
+assets/telas/page-1.png  ->  ferramentas/apps/page-1/index.html   # Ana
+assets/telas/partial-prerendering-1.png  ->  ferramentas/apps/partial-prerendering-1/index.html   # fallback
+assets/telas/performance-1.png  ->  ferramentas/apps/performance-1/index.html   # useMemo
+assets/telas/primeira-pagina-1.png  ->  ferramentas/apps/primeira-pagina-1/index.html   # Ana
+assets/telas/projeto-blog-1.png  ->  ferramentas/apps/projeto-blog-1/index.html   # generateStaticParams
+assets/telas/projeto-dashboard-1.png  ->  ferramentas/apps/projeto-dashboard-1/index.html   # ssr
+assets/telas/projeto-loja-1.png  ->  ferramentas/apps/projeto-loja-1/index.html   # use server
+assets/telas/projeto-portfolio-1.png  ->  ferramentas/apps/projeto-portfolio-1/index.html   # Suspense
+assets/telas/projeto-saas-1.png  ->  ferramentas/apps/projeto-saas-1/index.html   # plano
+assets/telas/props-1.png  ->  ferramentas/apps/props-1/index.html   # nome
+assets/telas/ref-estructura-1.png  ->  ferramentas/apps/ref-estructura-1/index.html   # ARQUIVO = 'page'
+assets/telas/rodando-1.png  ->  ferramentas/apps/rodando-1/index.html   # useState\(3001\)
+assets/telas/rotas-dinamicas-1.png  ->  ferramentas/apps/rotas-dinamicas-1/index.html   # find\(
+assets/telas/server-actions-1.png  ->  ferramentas/apps/server-actions-1/index.html   # enviar\(\);
+assets/telas/server-client-1.png  ->  ferramentas/apps/server-client-1/index.html   # use client
+assets/telas/ssr-ssg-isr-1.png  ->  ferramentas/apps/ssr-ssg-isr-1/index.html   # REVALIDATE = 60
+assets/telas/streaming-suspense-1.png  ->  ferramentas/apps/streaming-suspense-1/index.html   # React.Suspense
+assets/telas/variaveis-ambiente-1.png  ->  ferramentas/apps/variaveis-ambiente-1/index.html   # NEXT_PUBLIC_
+assets/telas/vercel-deploy-1.png  ->  ferramentas/apps/vercel-deploy-1/index.html   # production

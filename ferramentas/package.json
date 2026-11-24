@@ -1,0 +1,16 @@
+{
+  "name": "guia-nextjs-ferramentas",
+  "version": "1.0.0",
+  "description": "Gera fotos REAIS das telas do Guia Next.js (assets/telas/<pagina>-<n>.png) renderizando o pre.script de cada caixa tryreact em apps React reais, com Chromium headless via puppeteer-core",
+  "private": true,
+  "scripts": {
+    "fotos": "./gerar-fotos.sh",
+    "lista": "./gerar-fotos.sh --lista",
+    "foto": "node foto.js",
+    "figuras": "python3 atualizar-figuras.py .."
+  },
+  "dependencies": {
+    "@puppeteer/browsers": "^2.10.12",
+    "puppeteer-core": "^24.43.1"
+  }
+}

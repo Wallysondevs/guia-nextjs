@@ -4,13 +4,16 @@
 <script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 </head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
 <div class="pager"></div>
-<h1>Criando o projeto</h1>
+<h1>Criando o <span class="hl">projeto</span></h1>
 <p class="intro">Com o Node instalado, chegou a hora de a Ana criar o primeiro projeto. O comando mágico é <code>npx create-next-app@latest</code>: ele baixa o assistente oficial, faz algumas perguntas e entrega uma pasta pronta com tudo configurado. Nesta página você vai rodar esse comando e entender <em>cada pergunta</em> que ele faz.</p>
 <div class="note"><strong>Você vai aprender</strong><ul><li>Rodar <code>npx create-next-app@latest meu-app</code></li><li>O que significa cada pergunta interativa (TypeScript, ESLint, Tailwind, src/, App Router, Turbopack, alias)</li><li>Quais flags usar para criar o projeto sem perguntas (<code>--yes</code> / flags nomeadas)</li><li>Como entrar na pasta e conferir que deu certo</li></ul></div>
 <hr><h2>A ideia: o create-next-app é a Concessionária que monta seu carro zero</h2>
 <p>Comprar um carro zero km não é só "pegar as chaves": a concessionária pergunta cor, câmbio, se quer teto solar, seguro, blindagem... e no fim você sai com um carro montado do jeito que você pediu, com manual e garantia. O <code>create-next-app</code> funciona exatamente assim: ele é o assistente oficial que "monta o carro" (o projeto) fazendo uma entrevista rápida. Cada pergunta escolhe uma peça do seu projeto: se vai ter TypeScript (tipagem estática), ESLint (o "revisor" que acha erro antes de rodar), Tailwind (um kit de CSS utilitário), a pasta <code>src/</code>, o App Router, o Turbopack e o alias de importação <code>@/*</code>.</p>
 <p>O <code>npx</code> no começo é só um ajudante do npm: ele baixa o pacote <code>create-next-app</code> na hora (por isso o <code>@latest</code>, que garante a versão mais nova) e executa, <strong>sem instalar nada globalmente no seu computador</strong>. Ou seja: na primeira vez ele baixa rapidinho; depois usa o cache. Pense no <code>npx</code> como "empréstimo de ferramenta": você usa e devolve, não precisa comprar.</p>
 <p>Para o guia inteiro, as respostas da Ana são: <strong>TypeScript: Yes</strong> (o guia usa <code>.jsx</code> nos exemplos para ficar mais leve, mas o projeto pode ser TS — a lógica é idêntica), <strong>ESLint: Yes</strong>, <strong>Tailwind: No</strong> (vamos aprender CSS puro primeiro no capítulo de estilos), <strong>src/: No</strong>, <strong>App Router: Yes</strong> (essencial!), <strong>Turbopack: Yes</strong> e <strong>alias @/*: padrão (Yes)</strong>.</p>
+<h2>Ana compra o carro zero na concessionária em vez de montar peça por peça</h2>
+<p>Quando a Ana quis um carro, ela tinha duas opções: comprar cada peça (motor, banco, roda) e montar na garagem — semanas de trabalho e parafusos sobrando — ou ir numa <strong>concessionária e sair dirigindo no mesmo dia</strong>. O <code>create-next-app</code> é a concessionária do Next.js: um comando que entrega o carro pronto, com motor (React), rodas (roteador), pintura (CSS) e manual (README), bastando responder às perguntas do vendedor.</p>
+<p>As perguntas do assistente são as opções do carro: TypeScript? ESLint? Tailwind? <strong>App Router?</strong> — e neste guia a resposta para App Router é sempre <strong>Yes</strong>, porque é o modelo novo que o guia inteiro ensina. Depois do <code>cd meu-app</code>, a Ana já está dentro da concessionária dela, com tudo no lugar.</p>
 <h2>Rodando o assistente (terminal da Ana)</h2>
 <pre class="file" data-file="terminal">ana@notebook:~$ npx create-next-app@latest meu-app
 
@@ -26,7 +29,7 @@
 Creating a new Next.js app in /home/ana/meu-app.
 Installing dependencies: react, react-dom, next…
 Success! ✨  Happy coding!</pre>
-<figure class="tela"><img src="assets/telas/criar-projeto.png" alt="Terminal mostrando o create-next-app perguntando TypeScript, ESLint, Tailwind, src, App Router e terminando com Success!" width="1280" height="800" loading="lazy"><figcaption>O assistente interativo do <code>create-next-app</code>: cada ✔ é uma escolha que vira configuração do projeto.</figcaption></figure>
+<figure class="tela"><img src="assets/telas/criar-projeto-1.png" alt="Terminal mostrando o create-next-app perguntando TypeScript, ESLint, Tailwind, src, App Router e terminando com Success!" width="1280" height="800" loading="lazy"><figcaption>O assistente interativo do <code>create-next-app</code>: cada ✔ é uma escolha que vira configuração do projeto.</figcaption></figure>
 <h2>Sem perguntas: flags no próprio comando</h2>
 <p>Se a Ana já sabe as respostas (ou quer automatizar), dá para passar tudo na linha de comando e pular o modo interativo:</p>
 <pre class="file" data-file="terminal">ana@notebook:~$ npx create-next-app@latest meu-app \
@@ -40,6 +43,35 @@ ana@notebook:~$ npx create-next-app@latest meu-app --yes</pre>
 ana@notebook:~/meu-app$ ls
 app  node_modules  package.json  next.config.mjs  public  .gitignore
 ana@notebook:~/meu-app$ code .        # abre no VS Code (opcional)</pre>
+<div class="tryreact" data-goal="app-da-ana">
+<p class="try-task"><strong>Missão:</strong> troque o nome do projeto de <code>meu-app</code> para <code>app-da-ana</code> nas três linhas do terminal (comando, pasta criada e mensagem final). Rode ▶ e ✔.</p>
+<pre class="script" data-file="App.jsx">function App() {
+  const linhas = [
+    "$ npx create-next-app@latest meu-app",
+    "✔ Usar App Router? … Yes",
+    "Creating a new Next.js app in /home/ana/meu-app ...",
+    "Success! Created meu-app"
+  ];
+  return (
+    &lt;div style={{ background: "#111", color: "#0f0", fontFamily: "monospace", padding: 16 }}&gt;
+      {linhas.map((l, i) =&gt; &lt;div key={i}&gt;{l}&lt;/div&gt;)}
+    &lt;/div&gt;
+  );
+}</pre>
+<pre class="solucao" data-file="App.jsx">function App() {
+  const linhas = [
+    "$ npx create-next-app@latest app-da-ana",
+    "✔ Usar App Router? … Yes",
+    "Creating a new Next.js app in /home/ana/app-da-ana ...",
+    "Success! Created app-da-ana"
+  ];
+  return (
+    &lt;div style={{ background: "#111", color: "#0f0", fontFamily: "monospace", padding: 16 }}&gt;
+      {linhas.map((l, i) =&gt; &lt;div key={i}&gt;{l}&lt;/div&gt;)}
+    &lt;/div&gt;
+  );
+}</pre>
+</div>
 <h2>Quando dá errado</h2>
 <p>Erros reais que a Ana pode encontrar na criação:</p>
 <div class="warning"><strong>Erro 1:</strong> nome de pasta inválido (caractere especial ou pasta já existe):</div>

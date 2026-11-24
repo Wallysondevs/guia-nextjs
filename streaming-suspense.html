@@ -14,7 +14,7 @@
 <main class="main">
 <div class="content">
 <div class="pager"></div>
-<h1>Streaming e Suspense: a página chega em partes</h1>
+<h1><span class="hl">Streaming e Suspense</span>: a página chega em partes</h1>
 <p class="intro">A Ana reparou que algumas páginas dela demoravam demais para mostrar <em>qualquer coisa</em>: o visitante ficava olhando para uma tela branca até o último dado chegar. Com <strong>streaming</strong>, o Next.js manda o HTML em pedaços: o miolo rápido chega na hora e as partes lentas vão entrando depois, no lugar certo. Nesta aula você monta isso com <code>&lt;Suspense&gt;</code>, <code>loading.jsx</code> e componentes <code>async</code>.</p>
 <div class="note"><strong>Você vai aprender</strong><ul>
 <li>O que é streaming de HTML (o servidor manda <code>&lt;div hidden&gt;</code> + um <code>&lt;script&gt;</code> que troca o conteúdo quando chega)</li>
@@ -28,6 +28,9 @@
 <p>Imagine um jornal que só sai da gráfica quando a <strong>charge do dia</strong> fica pronta — se o chargista atrasa, ninguém recebe nada. Isso é a página sem streaming: um componente <code>async</code> lento segura o HTML inteiro. Agora imagine o jornal que imprime a <strong>manchete primeiro</strong> e, na mesma dobra, um espaço em branco com um <em>"desenho chega já já"</em>: o leitor já tem o essencial na hora, e a charge entra no espaço reservado quando fica pronta. Isso é o <strong>streaming com Suspense</strong>.</p>
 <p>Tecnicamente, o servidor manda o HTML em fluxo contínuo (<em>chunked</em>): primeiro o "shell" (cabeçalho, menu, texto) já utilizável, e as partes suspensas vão como blocos escondidos (<code>&lt;div hidden&gt;</code>) junto de um pequeno <code>&lt;script&gt;</code> que, quando os dados chegam, troca o <em>fallback</em> pelo conteúdo de verdade — sem recarregar a página. O navegador mostra o conteúdo parcial imediatamente e o resto "aparece" sozinho. Para o usuário, a página parece muito mais rápida; para o servidor, nada mudou além de não segurar tudo.</p>
 <p>O Next.js tem duas formas de declarar o "espaço reservado": o <code>&lt;Suspense&gt;</code> explícito em volta de um componente (controle fino, dentro da página) e o arquivo <code>loading.jsx</code> na pasta da rota (o fallback vale para o segmento inteiro — ótimo para a troca de página inteira).</p>
+<h2>Ana e o jornal que imprime a manchete primeiro e as páginas depois</h2>
+<p>O jornal da manhã não espera a última página ficar pronta para entregar o exemplar: a <strong>manchete sai primeiro</strong>, e as páginas mais pesadas (o caderno de esportes, os classifieds) chegam logo em seguida. O <strong>streaming</strong> do Next.js faz isso com a página: o que é rápido (menu, título) já aparece na tela na hora, e o que demora (uma tabela com mil linhas, um componente <code>async</code> que busca dados) entra depois, no lugar reservado pelo <code>&lt;Suspense fallback={...}&gt;</code> — o "aguarde um instante" do jornal.</p>
+<p>A Ana escreve o componente lento como <code>async</code> (ele mesmo busca os dados com <code>await fetch</code>) e envolve no <code>&lt;Suspense&gt;</code> com um fallback bonitinho (um skeleton, por exemplo). O navegador recebe o HTML em partes (stream) e vai preenchendo — o usuário vê a página "carregando por dentro" em vez de olhar para uma tela branca.</p>
 <h2>Componente async + Suspense no App Router</h2>
 <pre class="file" data-file="app/page.jsx">import { Suspense } from 'react';
 import Recomendados from './Recomendados'; // componente async (lento)
@@ -67,7 +70,7 @@ export default async function Comentarios() {
 export default function Loading() {
   return &lt;p role="status"&gt;⏳ Carregando a página…&lt;/p&gt;;
 }</pre>
-<figure class="tela"><img src="assets/telas/n3-streaming-suspense.png" alt="Página arriving em partes com Suspense" width="1280" height="800" loading="lazy"><figcaption>O shell chega primeiro; comentários e recomendados entram depois, nos espaços reservados pelo Suspense.</figcaption></figure>
+<figure class="tela"><img src="assets/telas/streaming-suspense-1.png" alt="Página arriving em partes com Suspense" width="1280" height="800" loading="lazy"><figcaption>O shell chega primeiro; comentários e recomendados entram depois, nos espaços reservados pelo Suspense.</figcaption></figure>
 <h2>Por que isso deixa a página mais rápida</h2>
 <p>Sem streaming, o tempo até o primeiro byte de conteúdo útil (TTFB + render completo) inclui <strong>todos</strong> os awaits da página. Com Suspense, o navegador já recebe e pinta o shell no primeiro pacote — o <strong>LCP</strong> (maior conteúdo visível) acontece cedo, mesmo que os dados lentos ainda estejam vindo. O Next.js também manda os blocos suspensos com <code>hidden</code> e um script inline que faz a troca no lugar, então não há "pulo" de layout nem recarregamento.</p>
 <div class="tryreact" data-goal="React.Suspense"><p class="try-task"><strong>Missão:</strong> rode o código (<em>▶ Rodar</em>) — o componente <code>&lt;Lento /&gt;</code> está solto, sem boundary, e o React reclama. Depois <strong> envolva &lt;Lento /&gt; em &lt;React.Suspense fallback={...}&gt;</strong> com um fallback <code>&lt;p&gt;⏳ Carregando…&lt;/p&gt;</code>. Rode de novo: agora a parte rápida aparece na hora e o dado lento entra depois. Clique em <em>Verificar missão</em>.</p><pre class="script" data-file="App.jsx">function App() {

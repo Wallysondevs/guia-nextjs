@@ -4,13 +4,16 @@
 <script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 </head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
 <div class="pager"></div>
-<h1>Páginas (page.jsx) vs layout</h1>
+<h1><span class="hl">Páginas</span> (page.jsx) vs layout</h1>
 <p class="intro">Agora que a Ana já viu o <code>layout.jsx</code> e o <code>page.jsx</code>, surge a dúvida: "se o layout já tem <code>&lt;html&gt;</code> e <code>&lt;body&gt;</code>, o que sobra para a página?" Nesta página você vai entender a diferença entre os dois e como eles se aninham — e ainda vai criar a segunda página da Ana, a rota <code>/sobre</code>.</p>
 <div class="note"><strong>Você vai aprender</strong><ul><li>A diferença: <code>layout</code> = moldura que persiste; <code>page</code> = conteúdo único da rota</li><li>Como criar a rota <code>/sobre</code> criando <code>app/sobre/page.jsx</code></li><li>O aninhamento: <code>layout</code> envolve <code>page</code> em toda rota</li><li>Os arquivos de convenção: <code>loading.jsx</code>, <code>error.jsx</code>, <code>not-found.jsx</code></li><li>Que a página pode receber props como <code>params</code> e <code>searchParams</code></li></ul></div>
 <hr><h2>A ideia: a moldura do quadro vs a pintura</h2>
 <p>Voltando à analogia da casa: o <strong>layout é a parede e a moldura</strong> — existe uma vez e fica lá, quieta, enquanto os quadros mudam. A <strong>página é o quadro</strong>: cada rota pendura um quadro diferente naquele mesmo espaço. Quando a Ana navega de <code>/</code> para <code>/sobre</code>, o Next.js <strong>não reconstrói a parede</strong> — ele só troca a pintura dentro da moldura. Por isso a navegação é instantânea e o menu não pisca: o layout foi renderizado uma vez e continua vivo; só o <code>{children}</code> recebe o novo quadro.</p>
 <p>Tecnicamente, quando o navegador pede <code>/sobre</code>, o Next.js Procura o caminho <code>app/sobre/page.jsx</code> e renderiza a árvore: <code>app/layout.jsx</code> por fora, <code>app/sobre/page.jsx</code> dentro do <code>{children}</code>. Se existir <code>app/sobre/layout.jsx</code>, ele entra no meio, envolvendo só as páginas de <code>/sobre</code>. A regra é simples: <strong>cada pasta de rota pode ter um page.jsx (obrigatório para a rota existir) e um layout.jsx (opcional)</strong>.</p>
 <p>Além de <code>page</code> e <code>layout</code>, cada pasta pode ter outros arquivos de convenção com nomes reservados: <code>loading.jsx</code> (mostra um "carregando…" enquanto a página não fica pronta), <code>error.jsx</code> (mostra uma página de erro amigável se a página quebrar — precisa de "use client"), <code>not-found.jsx</code> (a página 404) e <code>route.js</code> (API routes, que é assunto do Nível 2).</p>
+<h2>Ana pendura um quadro novo na parede: a moldura continua, o quadro muda</h2>
+<p>Na parede da sala da Ana há uma moldura grande e fixa — e dentro dela ela troca os quadros: hoje uma foto da praia, amanhã um pôster. A <strong>moldura é o layout</strong> (fica sempre no lugar: menu, rodapé, estrutura) e o <strong>quadro é a página</strong> (<code>page.jsx</code>: o conteúdo que muda de rota para rota). Quando a Ana navega de <code>/</code> para <code>/sobre</code>, a moldura nem pisca — só o quadro troca.</p>
+<p>Criar uma página nova para a Ana é pendurar um quadro novo: basta criar a pasta <code>app/sobre/</code> com um arquivo <code>page.jsx</code> dentro, exportando um componente padrão. A URL <code>/sobre</code> passa a existir sozinha — sem registrar rota em lugar nenhum, porque no App Router <strong>a pasta é a rota</strong>.</p>
 <h2>Criando a segunda página da Ana: /sobre</h2>
 <p>Basta criar a pasta e o arquivo — o Next.js já enxerga a rota nova na hora (hot reload de rotas):</p>
 <pre class="file" data-file="app/sobre/page.jsx">export default function Sobre() {
@@ -22,7 +25,7 @@
   );
 }</pre>
 <p>Agora abra <code>http://localhost:3000/sobre</code> no navegador. Repare que o <code>&lt;html&gt;</code>/<code>&lt;body&gt;</code> continua vindo do layout raiz — a página só forneceu o recheio.</p>
-<figure class="tela"><img src="assets/telas/page.png" alt="Dois navegadores lado a lado: a rota / e a rota /sobre, ambos com o mesmo header preto do layout" width="1280" height="800" loading="lazy"><figcaption>Mesma moldura (layout), quadros diferentes (page): <code>/</code> e <code>/sobre</code> compartilham o header.</figcaption></figure>
+<figure class="tela"><img src="assets/telas/page-1.png" alt="Dois navegadores lado a lado: a rota / e a rota /sobre, ambos com o mesmo header preto do layout" width="1280" height="800" loading="lazy"><figcaption>Mesma moldura (layout), quadros diferentes (page): <code>/</code> e <code>/sobre</code> compartilham o header.</figcaption></figure>
 <div class="table-wrap"><table class="ref"><tr><th>Arquivo</th><th>Papel</th><th>É obrigatório?</th></tr><tr><td><code>layout.jsx</code></td><td>Moldura que envolve as páginas; persiste na navegação; define <code>&lt;html&gt;/&lt;body&gt;</code> no raiz</td><td>Só o da raiz de <code>app/</code></td></tr><tr><td><code>page.jsx</code></td><td>O conteúdo único da rota (o quadro)</td><td>Sim, em toda pasta que é rota</td></tr><tr><td><code>loading.jsx</code></td><td>Tela de "carregando…" automática (Suspense)</td><td>Não</td></tr><tr><td><code>error.jsx</code></td><td>Tela de erro da rota (precisa de "use client")</td><td>Não</td></tr><tr><td><code>not-found.jsx</code></td><td>Página 404 personalizada</td><td>Não</td></tr><tr><td><code>template.jsx</code></td><td>Como o layout, mas <strong>recriado a cada navegação</strong></td><td>Não</td></tr></table></div>
 <h2>Props que a página recebe</h2>
 <p>O componente de página recebe props automáticas do Next.js: <code>params</code> (os segmentos dinâmicos da URL — nível 2) e <code>searchParams</code> (os parâmetros de query, tipo <code>?page=2</code>). No nível 1 a Ana pode ignorar, mas é bom saber que dá para receber:</p>
@@ -30,6 +33,33 @@
   const sp = await searchParams; // ex.: /?nome=Ana  →  sp.nome === "Ana"
   return &lt;h1&gt;Olá, {sp.nome ?? "visitante"}!&lt;/h1&gt;;
 }</pre>
+<div class="tryreact" data-goal="Ana">
+<p class="try-task"><strong>Missão:</strong> a página saúda “visitante”. Troque <code>Olá, visitante!</code> por <code>Olá, Ana!</code> no componente <code>Pagina</code> (é o <code>app/page.jsx</code> dela). Rode ▶ e ✔.</p>
+<pre class="script" data-file="App.jsx">function Pagina() {
+  return (
+    &lt;div style={{ padding: 20, fontFamily: "sans-serif" }}&gt;
+      &lt;h1&gt;Olá, visitante!&lt;/h1&gt;
+      &lt;p&gt;Esta é a página / — arquivo app/page.jsx.&lt;/p&gt;
+    &lt;/div&gt;
+  );
+}
+
+function App() {
+  return &lt;Pagina /&gt;;
+}</pre>
+<pre class="solucao" data-file="App.jsx">function Pagina() {
+  return (
+    &lt;div style={{ padding: 20, fontFamily: "sans-serif" }}&gt;
+      &lt;h1&gt;Olá, Ana!&lt;/h1&gt;
+      &lt;p&gt;Esta é a página / — arquivo app/page.jsx.&lt;/p&gt;
+    &lt;/div&gt;
+  );
+}
+
+function App() {
+  return &lt;Pagina /&gt;;
+}</pre>
+</div>
 <h2>Quando dá errado</h2>
 <div class="warning"><strong>Erro:</strong> a Ana criou <code>app/sobre.jsx</code> (arquivo solto em vez de pasta) e a rota /sobre deu 404:</div>
 <pre class="out">404 — This page could not be found.

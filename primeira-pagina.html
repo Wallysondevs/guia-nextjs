@@ -4,13 +4,16 @@
 <script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 </head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
 <div class="pager"></div>
-<h1>Sua primeira página</h1>
+<h1>Sua <span class="hl">primeira página</span></h1>
 <p class="intro">Chegou a hora de a Ana escrever o primeiro código dela. No Next.js, uma página é um arquivo <code>app/page.jsx</code> que exporta um componente React padrão. Nesta página você vai editar esse arquivo, entender as regras do JSX e ver a página aparecer no navegador.</p>
 <div class="note"><strong>Você vai aprender</strong><ul><li>Que <code>app/page.jsx</code> vira a rota <code>/</code> automaticamente</li><li>A anatomy de uma página: <code>export default function</code> + <code>return</code> com JSX</li><li>As regras do JSX: um elemento raiz, tags fechadas, <code>className</code>, <code>{ }</code> para JavaScript</li><li>Que o componente de página <strong>não recebe props obrigatórias</strong></li></ul></div>
 <hr><h2>A ideia: o page.jsx é o outdoor da esquina</h2>
 <p>Numa cidade, cada esquina tem um outdoor — aquele painel que anuncia uma loja. Você não precisa registrar o outdoor na prefeitura: <strong>só de você pendurar o painel numa esquina, as pessoas que passam ali já veem o anúncio</strong>. O <code>page.jsx</code> do Next.js funciona igual: só de você criar o arquivo dentro de <code>app/</code>, o Next.js já transforma ele numa rota pública. O arquivo <code>app/page.jsx</code> vira a esquina principal — a rota <code>/</code>. Se a Ana criar <code>app/sobre/page.jsx</code>, virou outra esquina: a rota <code>/sobre</code>. Não existe cadastro manual de rotas; o endereço nasce do caminho do arquivo.</p>
 <p>Dentro do arquivo, a página é um componente React comum: uma função JavaScript que retorna JSX (aquele "HTML dentro do JavaScript"). A única regra de ouro do Next.js: essa função precisa ser o <strong>export default</strong> do arquivo — é assim que o Next encontra "qual componente é a página". Pense no <code>export default</code> como a placa de "ABERTO" na porta: sem ela, o Next.js não sabe que ali dentro tem uma página.</p>
 <p>E o JSX tem regrinhas próprias, vindas do React: (1) o retorno precisa de <strong>um único elemento raiz</strong> — se quiser devolver dois títulos seguidos, envolva num <code>&lt;div&gt;</code> ou num fragmento <code>&lt;&gt;...&lt;/&gt;</code>; (2) toda tag abre e fecha — <code>&lt;img&gt;</code> vira <code>&lt;img /&gt;</code>; (3) atributos viram camelCase: <code>class</code> vira <code>className</code>, <code>onclick</code> vira <code>onClick</code>; (4) para colocar JavaScript no meio do HTML, use chaves <code>{ }</code> — é a janelinha do JSX.</p>
+<h2>Ana pendura a placa na esquina: a primeira página é o outdoor do site</h2>
+<p>Quando a Ana abriu a lojinha, a primeira coisa que ela fez foi pendurar a placa na esquina: <strong>"Loja da Ana — aberto!"</strong>. Não precisou de manual, de SEO ou de anúncio — a placa no lugar certo já fazia o trabalho. O arquivo <code>app/page.jsx</code> é essa placa: ele é a rota <code>/</code>, a primeira porta do site, e tudo que a Ana exportar como padrão nele aparece na home.</p>
+<p>Editar a primeira página é trocar o texto da placa: a Ana abre <code>app/page.jsx</code>, muda o <code>&lt;h1&gt;</code>, salva, e o servidor de desenvolvimento mostra na hora (hot reload). Em segundos a placa nova está no ar em <code>localhost:3000</code> — sem build, sem deploy, sem drama.</p>
 <h2>Editando a página inicial</h2>
 <p>Apague o conteúdo padrão que o <code>create-next-app</code> colocou e deixe o <code>app/page.jsx</code> assim:</p>
 <pre class="file" data-file="app/page.jsx">export default function Home() {
@@ -22,20 +25,30 @@
   );
 }</pre>
 <p>Salve o arquivo (<kbd>Ctrl</kbd>+<kbd>S</kbd>) e olhe o navegador: se o servidor de dev estiver rodando (você vai aprender no próximo capítulo), a página já mudou sozinha. Repare que usamos <code>&lt;main&gt;</code> como raiz única, as tags estão todas fechadas e o componente se chama <code>Home</code> por convenção — o nome não faz diferença para a rota, só o <code>export default</code>.</p>
-<div class="tryreact" data-goal="Ana"><p class="try-task"><strong>Missão:</strong> no código abaixo, troque o texto para mostrar o seu nome dentro de uma tag <code>&lt;h1&gt;</code> — por exemplo <code>&lt;h1&gt;Olá, Ana!&lt;/h1&gt;</code> — e aperte ▶ Rodar.</p><pre class="script" data-file="App.jsx">export default function Home() {
+<div class="tryreact" data-goal="Ana"><p class="try-task"><strong>Missão:</strong> no código abaixo, troque o texto para mostrar o seu nome dentro de uma tag <code>&lt;h1&gt;</code> — por exemplo <code>&lt;h1&gt;Olá, Ana!&lt;/h1&gt;</code> — e aperte ▶ Rodar.</p><pre class="script" data-file="App.jsx">function Home() {
   return (
     &lt;main&gt;
       &lt;h1&gt;Olá, mundo!&lt;/h1&gt;
     &lt;/main&gt;
   );
-}</pre><pre class="solucao" data-file="App.jsx">export default function Home() {
+}
+
+function App() {
+  return &lt;Home /&gt;;
+}
+</pre><pre class="solucao" data-file="App.jsx">function Home() {
   return (
     &lt;main&gt;
       &lt;h1&gt;Olá, Ana!&lt;/h1&gt;
     &lt;/main&gt;
   );
-}</pre></div>
-<figure class="tela"><img src="assets/telas/primeira-pagina.png" alt="Navegador em localhost:3000 mostrando a página com o título Olá, Next.js!" width="1280" height="800" loading="lazy"><figcaption>O resultado no navegador: <code>http://localhost:3000</code> servindo o <code>app/page.jsx</code> editado.</figcaption></figure>
+}
+
+function App() {
+  return &lt;Home /&gt;;
+}
+</pre></div>
+<figure class="tela"><img src="assets/telas/primeira-pagina-1.png" alt="Navegador em localhost:3000 mostrando a página com o título Olá, Next.js!" width="1280" height="800" loading="lazy"><figcaption>O resultado no navegador: <code>http://localhost:3000</code> servindo o <code>app/page.jsx</code> editado.</figcaption></figure>
 <h2>Usando JavaScript dentro do JSX</h2>
 <p>Com as chaves <code>{ }</code>, a Ana consegue colocar qualquer valor JavaScript dentro do HTML — variáveis, contas, condicionais:</p>
 <pre class="file" data-file="app/page.jsx">export default function Home() {

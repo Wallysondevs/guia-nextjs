@@ -4,14 +4,14 @@
 <script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 </head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
 <div class="pager"></div>
-<h1>App Router vs Pages Router</h1>
+<h1><span class="hl">App Router</span> vs Pages Router</h1>
 <p class="intro">Ana criou o projeto dela e o terminal mostrou duas palavras misteriosas: <em>App Router</em> e <em>Pages Router</em>. Parecem nomes de aplicativo de transporte, mas são as duas formas de organizar as rotas do Next.js. Nesta página você vai entender a diferença e por que o guia inteiro usa o App Router.</p>
 <div class="note"><strong>Você vai aprender</strong><ul><li>O que é o Pages Router (pasta <code>pages/</code>) e como ele funcionava</li><li>O que é o App Router (pasta <code>app/</code>) e o que mudou</li><li>Por que o App Router é o padrão do <code>create-next-app</code> hoje</li><li>Como escolher entre os dois no projeto novo</li></ul></div>
 <hr><h2>A ideia: caderno de folhas soltas vs fichário com lombada</h2>
 <p>Imagine que a Ana tem um <strong>caderno</strong> para anotar as páginas do site dela. No modelo antigo — o <strong>Pages Router</strong> — cada folha do caderno é uma página solta: <code>pages/index.js</code> é a home, <code>pages/sobre.js</code> é a página "sobre", <code>pages/blog.js</code> é o blog. Cada arquivo desses exporta um componente e vira uma rota. Só que cada folha é independente: se a Ana quer um menu que apareça em todas as páginas, ela tem que copiar e colar o menu em cada uma das folhas, ou usar um truque com <code>_app.js</code>. É como ter dez cadernos diferentes, um para cada página, e ter que desenhar a mesma capa em todos.</p>
 <p>Agora imagine um <strong>fichário</strong> — o modelo novo, o <strong>App Router</strong>. Nesse fichário, as folhas ficam presas numa lombada compartilhada: o arquivo <code>app/layout.jsx</code> é essa lombada, e todas as páginas (<code>app/page.jsx</code>, <code>app/sobre/page.jsx</code>…) ficam penduradas nela, herdando o menu, o rodapé e a estrutura de <code>&lt;html&gt;</code>/<code>&lt;body&gt;</code> automaticamente. Além disso, no fichário as folhas podem ser de tipos diferentes: algumas são desenhadas inteiras no servidor (rápidas e leves), outras ganham interatividade no navegador. O Pages Router não tinha essa divisão — era tudo a mesma coisa.</p>
 <p>Tecnicamente, o App Router chegou no Next.js 13 (outubro de 2022) e brought os <strong>React Server Components</strong>: componentes que são renderizados só no servidor e cujo código JavaScript nem é enviado para o navegador. Isso deixou as páginas mais leves e rápidas. Desde o Next.js 13.4 ele é estável, e no Next.js 14/15 virou o padrão — tanto que hoje o <code>create-next-app</code> pergunta "Usar App Router?" e a resposta recomendada é <strong>Yes</strong>. O Pages Router continua funcionando (muitos projetos legados usam ele), mas está em modo de manutenção: não recebe as novidades novas. Por isso este guia inteiro usa <code>app/</code>.</p>
-<figure class="tela"><img src="assets/telas/app-vs-pages.png" alt="Comparação lado a lado entre a pasta pages/ (Pages Router antigo) e a pasta app/ (App Router atual, destacado em verde)" width="1280" height="800" loading="lazy"><figcaption>As duas convenções de rotas: <code>pages/</code> (modo manutenção) e <code>app/</code> (padrão atual, com App Router).</figcaption></figure>
+<figure class="tela"><img src="assets/telas/app-vs-pages-1.png" alt="Comparação lado a lado entre a pasta pages/ (Pages Router antigo) e a pasta app/ (App Router atual, destacado em verde)" width="1280" height="800" loading="lazy"><figcaption>As duas convenções de rotas: <code>pages/</code> (modo manutenção) e <code>app/</code> (padrão atual, com App Router).</figcaption></figure>
 <div class="table-wrap"><table class="ref"><tr><th></th><th>Pages Router</th><th>App Router</th></tr><tr><td>Pasta</td><td><code>pages/</code></td><td><code>app/</code></td></tr><tr><td>Página inicial</td><td><code>pages/index.js</code></td><td><code>app/page.jsx</code></td></tr><tr><td>Layout compartilhado</td><td><code>pages/_app.js</code> (truque)</td><td><code>app/layout.jsx</code> (nativo, aninhável)</td></tr><tr><td>Componentes padrão</td><td>sempre no navegador</td><td><strong>Server Components</strong> (no servidor)</td></tr><tr><td>Busca de dados no servidor</td><td><code>getServerSideProps</code> / <code>getStaticProps</code></td><td><code>fetch</code> direto no componente <code>async</code></td></tr><tr><td>Status hoje</td><td>modo de manutenção</td><td><strong>padrão recomendado</strong> (Next 13.4+, padrão no 14/15)</td></tr><tr><td>Suporte a React 19</td><td>limitado</td><td>completo</td></tr></table></div>
 <h2>Como o create-next-app pergunta</h2>
 <p>Na hora de criar o projeto, o assistente pergunta literalmente <code>✔ Usar App Router? … Yes/No</code>. No guia inteiro a resposta é <strong>Yes</strong>. Se você rispondere "No", o projeto cai no modo antigo e os capítulos seguintes (que usam <code>app/</code>, <code>layout.jsx</code> e Server Components) não vão funcionar.</p>
@@ -22,6 +22,48 @@
 ✔ Usar o diretório src/? … No
 ✔ Usar App Router? … Yes        ← escolha Yes aqui
 ✔ Usar Turbopack para o dev? … Yes</pre>
+<div class="tryreact" data-goal="app/sobre/page\.jsx">
+<p class="try-task"><strong>Missão:</strong> no modo <code>app/</code>, adicione a linha <code>&lt;pre&gt;app/sobre/page.jsx → /sobre&lt;/pre&gt;</code> dentro da lista de rotas. Clique em ▶ Rodar e depois em ✔ Verificar missão.</p>
+<pre class="script" data-file="App.jsx">function App() {
+  const [modo, setModo] = React.useState("app");
+  return (
+    &lt;div style={{ fontFamily: "monospace", padding: 20 }}&gt;
+      &lt;button onClick={() =&gt; setModo(modo === "app" ? "pages" : "app")}&gt;
+        convention atual: {modo}/
+      &lt;/button&gt;
+      {modo === "app" ? (
+        &lt;div&gt;
+          &lt;pre&gt;app/page.jsx → /&lt;/pre&gt;
+        &lt;/div&gt;
+      ) : (
+        &lt;div&gt;
+          &lt;pre&gt;pages/index.js → /&lt;/pre&gt;
+        &lt;/div&gt;
+      )}
+    &lt;/div&gt;
+  );
+}</pre>
+<pre class="solucao" data-file="App.jsx">function App() {
+  const [modo, setModo] = React.useState("app");
+  return (
+    &lt;div style={{ fontFamily: "monospace", padding: 20 }}&gt;
+      &lt;button onClick={() =&gt; setModo(modo === "app" ? "pages" : "app")}&gt;
+        convention atual: {modo}/
+      &lt;/button&gt;
+      {modo === "app" ? (
+        &lt;div&gt;
+          &lt;pre&gt;app/page.jsx → /&lt;/pre&gt;
+          &lt;pre&gt;app/sobre/page.jsx → /sobre&lt;/pre&gt;
+        &lt;/div&gt;
+      ) : (
+        &lt;div&gt;
+          &lt;pre&gt;pages/index.js → /&lt;/pre&gt;
+        &lt;/div&gt;
+      )}
+    &lt;/div&gt;
+  );
+}</pre>
+</div>
 <h2>Quando dá errado</h2>
 <p>Se a Ana escolheu "No" sem querer e depois tentou criar <code>app/page.jsx</code>, o Next simplesmente <strong>não acha nenhuma página</strong> e cai no erro real de "rota não encontrada" na hora do build, ou mostra a página padrão antiga. Outro erro real comum: misturar as duas convenções — criar <code>pages/</code> e <code>app/</code> no mesmo projeto. O Next até aceita, mas o comportamento fica confuso (as rotas de <code>app/</code> têm prioridade). O erro real que aparece é:</p>
 <div class="warning"><strong>Erro:</strong> ter as duas pastas no mesmo projeto e ver rotas sumirem ou comportamento estranho:</div>

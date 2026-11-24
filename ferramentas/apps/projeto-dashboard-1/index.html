@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ssr</title>
+<!-- React 18 UMD + Babel standalone servidos localmente (offline) a partir de /ferramentas/vendor/ -->
+<script src="/ferramentas/vendor/react.production.min.js"></script>
+<script src="/ferramentas/vendor/react-dom.production.min.js"></script>
+<script src="/ferramentas/vendor/babel.min.js"></script>
+<style>
+  /* foto limpa: fundo branco, sem bordas, sem margem */
+  html, body { margin: 0; padding: 0; background: #ffffff; }
+  #root { background: #ffffff; min-height: 100vh; }
+</style>
+<style id="css-do-exemplo">
+
+</style>
+<script>
+/* =====================================================================
+   Shims de Next.js — o código do guia usa next/link, next/navigation,
+   next/image, next/font etc. Aqui viram componentes/hooks simples:
+   Link = <a>, useRouter = mock, Image = <img>, Inter() = fonte fake.
+   ===================================================================== */
+(function () {
+  var React = window.React;
+
+  // hooks do React como globais (o código pode usar useState direto)
+  window.useState = React.useState;
+  window.useEffect = React.useEffect;
+  window.useMemo = React.useMemo;
+  window.useRef = React.useRef;
+  window.useCallback = React.useCallback;
+  window.useReducer = React.useReducer;
+  window.useContext = React.useContext;
+
+  // React.lazy cacheado por código da fábrica: alguns exemplos criam o lazy
+  // DENTRO do componente (const L = React.lazy(...) no corpo) — sem cache isso
+  // criaria um lazy novo a cada render e ficaria suspenso para sempre.
+  var _lazyCache = new Map();
+  var _lazyOriginal = React.lazy.bind(React);
+  React.lazy = function (fabrica) {
+    var chave = fabrica.toString();
+    if (!_lazyCache.has(chave)) _lazyCache.set(chave, _lazyOriginal(fabrica));
+    return _lazyCache.get(chave);
+  };
+
+  // next/link -> <a>
+  window.Link = function (props) {
+    var resto = {};
+    for (var k in props) { if (k !== 'children' && k !== 'href') resto[k] = props[k]; }
+    resto.href = props.href || '#';
+    return React.createElement('a', resto, props.children);
+  };
+
+  // next/image -> <img>
+  window.Image = function (props) {
+    var p = {};
+    for (var k in props) { p[k] = props[k]; }
+    if (p.fill) { p.style = Object.assign({ objectFit: 'cover' }, p.style); delete p.fill; }
+    return React.createElement('img', p);
+  };
+
+  // next/navigation -> mocks
+  window.useRouter = function () {
+    return { push: function () {}, replace: function () {}, back: function () {},
+             forward: function () {}, refresh: function () {}, prefetch: function () {} };
+  };
+  window.usePathname = function () { return '/'; };
+  window.useSearchParams = function () { return new URLSearchParams(); };
+  window.useParams = function () { return {}; };
+  window.redirect = function () {};
+  window.notFound = function () {};
+
+  // next/headers -> mock de cookies
+  window.cookies = function () {
+    return Promise.resolve({
+      get: function () { return undefined; },
+      getAll: function () { return []; },
+      has: function () { return false; },
+      set: function () {},
+      delete: function () {}
+    });
+  };
+  window.headers = function () { return Promise.resolve(new Headers()); };
+
+  // next/font/google -> devolve className vazia (fonte do sistema)
+  function fonteFake() {
+    return { className: '', style: { fontFamily: 'system-ui, -apple-system, "Segoe UI", Arial, sans-serif' }, variable: '' };
+  }
+  ['Inter', 'Roboto', 'Open_Sans', 'Poppins', 'Montserrat', 'Lato', 'Nunito',
+   'Roboto_Mono', 'Fira_Code', 'Source_Code_Pro', 'Playfair_Display', 'Merriweather', 'Geist'
+  ].forEach(function (nome) { window[nome] = function () { return fonteFake(); }; });
+})();
+</script>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- Código JSX extraído da página do guia (pre.script da caixa tryreact) -->
+<script type="text/babel" data-presets="react">
+// no Next.js: import dynamic from 'next/dynamic';
+const dynamic = (fn, opts) => fn().then ? null : null; // (simulação)
+
+function App() {
+  // TODO: use dynamic(() => Promise.resolve({ default: Grafico })) com { ssr: false }
+  const Grafico = () => <p>📊 gráfico (só no navegador)</p>;
+  return (
+    <div>
+      <h1>📊 Dashboard</h1>
+      <Grafico />
+    </div>
+  );
+}
+</script>
+
+<script>
+  // Renderização automática de fallback:
+  // se o código do exemplo NÃO renderizou nada (era só `function App() {...}`
+  // ou `export default function Home() {...}`), o template monta o componente
+  // sozinho, dentro de um Suspense (para React.lazy dos exemplos de streaming).
+  window.addEventListener('load', function () {
+    setTimeout(function () {
+      var el = document.getElementById('root');
+      if (!el || el.innerHTML.trim()) return;
+      function suspense(elemento) {
+        return React.createElement(React.Suspense,
+          { fallback: React.createElement('p', { style: { fontFamily: 'sans-serif', padding: 24 } }, '⏳ carregando…') },
+          elemento);
+      }
+      function render(comp, props) {
+        try {
+          if (comp && comp.constructor && comp.constructor.name === 'AsyncFunction') {
+            // Server Component async: chama a função e renderiza o elemento resolvido
+            Promise.resolve(comp(props || {})).then(function (r) {
+              ReactDOM.createRoot(el).render(suspense(r));
+            }).catch(function (e) { console.error(e); });
+          } else {
+            ReactDOM.createRoot(el).render(suspense(React.createElement(comp, props || {})));
+          }
+        } catch (e) { console.error(e); }
+      }
+      if (typeof App === 'function') return render(App);
+      if (typeof __default === 'function') return render(__default);
+      if (typeof Home === 'function') return render(Home, { searchParams: Promise.resolve({ nome: 'Ana' }) });
+      if (typeof __default !== 'undefined' && __default) {
+        return render(function () { return __default; });
+      }
+    }, 400);
+  });
+</script>
+</body>
+</html>

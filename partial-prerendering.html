@@ -14,7 +14,7 @@
 <main class="main">
 <div class="content">
 <div class="pager"></div>
-<h1>Partial Prerendering (PPR): estático e dinâmico na mesma página</h1>
+<h1><span class="hl">Partial Prerendering</span> (PPR): estático e dinâmico na mesma página</h1>
 <p class="intro">A Ana queria o melhor dos dois mundos numa página só: a capa e o menu <strong>estáticos</strong> (rápidos, cacheáveis) e o preço do produto <strong>ao vivo</strong> (dinâmico). Com o <strong>PPR</strong> — Partial Prerendering, ainda experimental — o Next.js entrega exatamente isso: um "shell" estático servido na hora e ilhas dinâmicas que chegam por streaming dentro do mesmo HTML.</p>
 <div class="note"><strong>Você vai aprender</strong><ul>
 <li>O que é PPR: um único HTML com parte pré-renderizada (estática) + <code>&lt;Suspense&gt;</code> para o resto</li>
@@ -27,6 +27,9 @@
 <p>Imagine uma revista impressa: a <strong>capa, o índice e os artigos</strong> são todos iguais para todo mundo — foram impressos uma vez e ficam prontos na banca (isso é o shell estático). Só um pedacinho, o <strong>preço riscado à mão na hora</strong>, muda para cada cliente (isso é a parte dinâmica). O PPR é essa revista: o Next.js pré-renderiza tudo que é igual para todos e deixa "buracos" com <code>&lt;Suspense&gt;</code> exatamente onde os dados precisam ser frescos — <code>cookies()</code>, <code>headers()</code>, banco de dados ao vivo.</p>
 <p>Na prática, a primeira requisição recebe o <strong>shell estático instantâneo</strong> (vem do cache/CDN) com os fallbacks nos buracos, e o servidor continua o trabalho em segundo plano: quando a parte dinâmica fica pronta, ela entra no lugar via streaming — a mesma mágica da aula anterior, mas agora <em>metade da página já está cacheada</em>. O resultado: TTFB baixo (rápido) <strong>e</strong> dados frescos onde precisa.</p>
 <p>A regra prática da Ana: <strong>tudo que não depende do pedido pode ficar fora do Suspense</strong> (nome do site, layout, lista de categorias cacheada) e vira parte do shell estático; <strong>tudo que lê o pedido</strong> (<code>cookies()</code>, <code>params</code> de busca, dados que mudam toda hora) entra num <code>&lt;Suspense&gt;</code> e vira ilha dinâmica.</p>
+<h2>Ana imprime a capa da revista de manhã, mas a cotação entra ao vivo</h2>
+<p>A revista da banca sai com a capa impressa de madrugada — fotos, manchetes, índice, tudo estático. Só a <strong>cotação do dólar</strong>, aquela caixinha no canto, é atualizada ao vivo por um telão. O <strong>Partial Prerendering (PPR)</strong> é essa revista: a parte estática da página é gerada no build (a capa), e só os trechos marcados como dinâmicos (o telão) são renderizados na hora da requisição, dentro de um <code>&lt;Suspense&gt;</code>.</p>
+<p>A Ana não precisa escolher entre "página 100% estática" e "página 100% dinâmica": com o PPR ela tem as duas na mesma página. É a capa impressa (rápida, cacheável, barata de servir) com a caixinha ao vivo (dados frescos do banco) — o melhor dos dois mundos numa única rota.</p>
 <h2>Ativando o PPR e separando as partes</h2>
 <pre class="file" data-file="next.config.js">/** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -65,7 +68,7 @@ export default async function PrecoAoVivo() {
   const { preco } = await res.json();
   return &lt;p&gt;💵 Preço agora (para a sua sessão): &lt;strong&gt;R$ {preco}&lt;/strong&gt;&lt;/p&gt;;
 }</pre>
-<figure class="tela"><img src="assets/telas/n3-ppr.png" alt="Página com shell estático e parte dinâmica em streaming (PPR)" width="1280" height="800" loading="lazy"><figcaption>Com PPR, a capa (shell) chega na hora do cache e o preço ao vivo entra depois, dentro do Suspense.</figcaption></figure>
+<figure class="tela"><img src="assets/telas/partial-prerendering-1.png" alt="Página com shell estático e parte dinâmica em streaming (PPR)" width="1280" height="800" loading="lazy"><figcaption>Com PPR, a capa (shell) chega na hora do cache e o preço ao vivo entra depois, dentro do Suspense.</figcaption></figure>
 <div class="tryreact" data-goal="fallback"><p class="try-task"><strong>Missão:</strong> no código abaixo, o <code>&lt;Header /&gt;</code> está <strong>dentro</strong> do Suspense junto com o preço — assim ele também fica esperando. Mova o <code>&lt;Header /&gt;</code> para <strong>fora</strong> do <code>&lt;React.Suspense&gt;</code> e deixe só o <code>&lt;Preco /&gt;</code> dentro, com um <code>fallback</code> de "carregando preço…". Rode antes e depois para sentir a diferença. Depois clique em <em>Verificar missão</em>.</p><pre class="script" data-file="App.jsx">function Header() {
   return &lt;p&gt;🏠 Loja da Ana — shell que poderia ser estático&lt;/p&gt;;
 }

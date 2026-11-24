@@ -14,7 +14,7 @@
 <main class="main">
 <div class="content">
 <div class="pager"></div>
-<h1>Projeto: Loja com carrinho, Server Actions e Stripe</h1>
+<h1>Projeto: <span class="hl">Loja</span> com carrinho, Server Actions e Stripe</h1>
 <p class="intro">A Ana quer vender seus bolos online. Nesta projeto você monta a lojinha inteira: produtos listados de forma estática (rápido), um <strong>carrinho que vive num cookie</strong> atualizado por <strong>Server Actions</strong> (sem API separada!) e o pagamento redirecionando para o <strong>checkout hospedado do Stripe</strong>, com webhook para confirmar o pedido.</p>
 <div class="note"><strong>Você vai aprender</strong><ul>
 <li>Server Actions: arquivo <code>'use server'</code> com funções async que reciben <code>FormData</code></li>
@@ -27,6 +27,9 @@
 <h2>A ideia: o pedido no balcão sem papelzinho</h2>
 <p>Numa loja física, o cliente pega o produto e o atendente anota no pedido — o pedido não fica grudado no produto, fica numa fichinha separada. No Next.js, o <strong>Server Action</strong> é o atendente: o navegador manda um <code>&lt;form action={…}&gt;</code> (ou chama a função direto) e o <strong>servidor</strong> executa a função — ler/gravar cookie, consultar o banco, chamar a API do Stripe — sem existir uma API REST no meio. O carrinho da Ana vai numa fichinha (cookie) lida e gravada no servidor, e a página é revalidada com <code>revalidatePath</code> para mostrar o carrinho novo.</p>
 <p>O pagamento segue o mesmo fluxo seguro: o servidor cria uma <strong>sessão de checkout no Stripe</strong> (com os itens e URLs de sucesso/cancelamento) e manda o navegador para a página hospedada do Stripe (PCI-compliant — o cartão nunca passa pelo seu servidor). Quando o cliente paga, o Stripe avisa seu servidor pelo <strong>webhook</strong> (uma URL que recebe POSTs assinados) e aí você marca o pedido como pago no banco.</p>
+<h2>Ana monta a loja de esquina: vitrine, balcão e o pedido que vai direto para a cozinha</h2>
+<p>A loja da Ana tem três partes: a <strong>vitrine</strong> (as páginas de produto, leves e bem posicionadas no Google), o <strong>balcão</strong> (o carrinho, que vive no navegador com <code>useState</code>) e a <strong>cozinha</strong> (as Server Actions, que gravam o pedido no banco sem o cliente ver como). Juntando as três, ela tem uma loja que parece simples por fora e é um sistema de verdade por dentro.</p>
+<p>E o pagamento? A Ana não guarda cartão de crédito no servidor dela — ela manda o cliente para o checkout do Stripe (a maquininha de cartão da internet) e recebe de volta só a confirmação assinada. Assim a loja dela processa pagamento sem nunca tocar no número do cartão.</p>
 <h2>Passo 1 — produtos e Server Action do carrinho</h2>
 <pre class="file" data-file="lib/produtos.js">export const PRODUTOS = [
   { id: 'bolo-cenoura', nome: 'Bolo de cenoura', preco: 35.0, img: '/bolos/cenoura.jpg' },
@@ -189,7 +192,7 @@ export async function POST(req) {
 <pre class="file" data-file=".env.local">NEXT_PUBLIC_URL=http://localhost:3000
 STRIPE_SECRET_KEY=sk_test_…
 STRIPE_WEBHOOK_SECRET=whsec_…   # vem de: stripe listen --forward-to localhost:3000/api/stripe/webhook</pre>
-<figure class="tela"><img src="assets/telas/proj-loja.png" alt="Loja com produtos, carrinho e checkout Stripe" width="1280" height="800" loading="lazy"><figcaption>Produtos estáticos, carrinho no cookie via Server Action e botão de pagamento que abre o checkout do Stripe.</figcaption></figure>
+<figure class="tela"><img src="assets/telas/projeto-loja-1.png" alt="Loja com produtos, carrinho e checkout Stripe" width="1280" height="800" loading="lazy"><figcaption>Produtos estáticos, carrinho no cookie via Server Action e botão de pagamento que abre o checkout do Stripe.</figcaption></figure>
 <div class="tryreact" data-goal="use server"><p class="try-task"><strong>Missão:</strong> no código abaixo, a função que adiciona ao carrinho está sem a diretiva de servidor. Adicione <code>'use server';</code> na primeira linha do arquivo (é assim que o Next.js sabe que essa função roda no servidor e pode mexer em cookie). Rode e clique em <em>Verificar missão</em>.</p><pre class="script" data-file="app/actions.js">// TODO: 'use server';
 
 async function addToCart(formData) {

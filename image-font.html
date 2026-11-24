@@ -14,7 +14,7 @@
 <main class="main">
 <div class="content">
 <div class="pager"></div>
-<h1>Imagens e fontes: next/image e next/font</h1>
+<h1><span class="hl">Imagens e fontes</span>: next/image e next/font</h1>
 <p class="intro">A Ana trocou todos os <code>&lt;img&gt;</code> do site por <code>&lt;Image&gt;</code> e as páginas pararam de "pular" ao carregar — porque a imagem já reserva o espaço. E trocou o <code>&lt;link&gt;</code> do Google Fonts por <code>next/font</code> e a fonte passou a vir do próprio servidor, sem bloquear a pintura. Nesta aula você aprende os dois.</p>
 <div class="note"><strong>Você vai aprender</strong><ul>
 <li><code>next/image</code>: WebP/AVIF automático, lazy loading, <code>sizes</code>, <code>priority</code> (LCP) e <code>fill</code></li>
@@ -27,6 +27,9 @@
 <h2>A ideia: a padaria e a letra de mão</h2>
 <p>Uma imagem com <code>&lt;img&gt;</code> comum é como um <strong>pão embrulhado em jornal</strong>: o navegador não sabe o tamanho do pacote, então não reserva lugar na mesa — quando o pão chega, empurra todo o resto da refeição (é o <em>layout shift</em>, o famoso CLS ruim). O <code>&lt;Image&gt;</code> é o pão embalado com etiqueta de tamanho: o navegador reserva a fatia exata na mesa (width/height), e quando a imagem chega já cabe certinho, sem empurrar nada. Além disso, o Next.js reenvia a imagem no formato certo (WebP/AVIF, menor), no tamanho certo da tela (<code>sizes</code>) e só quando ela está perto de aparecer (lazy) — ou na hora, se for a imagem principal (<code>priority</code>).</p>
 <p>A fonte é a mesma história com outra metáfora: buscar a fonte no Google Fonts durante o carregamento é como <strong>escrever o cardápio à mão na hora do pedido</strong> — o texto aparece com a letra padrão feia até a "letra bonita" chegar (FOUT). O <code>next/font</code> baixa a fonte <strong>no momento do build</strong>, guarda no seu próprio servidor e entrega com <code>@font-face</code> local: zero requisição externa, zero pulo de letra, e ainda ganha <em>preload</em> automático. A Ana trocou a fonte e o Lighthouse parou de reclamar.</p>
+<h2>Ana escolhe a fonte da placa e o tamanho certo da foto na vitrine</h2>
+<p>Na loja nova da Ana, a placa tem que ser legível de longe — então ela escolhe uma <strong>letra grande e própria</strong>, não a letra de mão do rascunho. O <code>next/font</code> faz isso no site: a fonte vira um arquivo otimizado, servido do próprio servidor, sem o navegador ir buscar no Google e sem a letra "pular" quando carrega (zero layout shift). Já o <code>next/image</code> é a foto da vitrine: ele ajusta o tamanho certo, converte para um formato leve (WebP/AVIF) e só carrega a imagem quando ela vai aparecer na tela.</p>
+<p>Juntas, as duas ferramentas são o kit de vitrine da Ana: a placa (fonte) sempre no lugar certo e a foto (imagem) leve e nítida. E o melhor: como o trabalho é feito no build/servidor, o navegador recebe tudo mastigado — a página abre rápido e o Google entende o conteúdo.</p>
 <h2>next/image na prática</h2>
 <pre class="file" data-file="app/galeria/page.jsx">import Image from 'next/image';
 
@@ -131,7 +134,7 @@ function App() {
     &lt;/div&gt;
   );
 }</pre></div>
-<figure class="tela"><img src="assets/telas/n3-image-font.png" alt="Galeria com next/image e fonte otimizada" width="1280" height="800" loading="lazy"><figcaption>Com next/image o espaço da foto já está reservado (sem pulo) e a fonte vem do próprio servidor via next/font.</figcaption></figure>
+<figure class="tela"><img src="assets/telas/image-font-1.png" alt="Galeria com next/image e fonte otimizada" width="1280" height="800" loading="lazy"><figcaption>Com next/image o espaço da foto já está reservado (sem pulo) e a fonte vem do próprio servidor via next/font.</figcaption></figure>
 <h2>Quando dá errado</h2>
 <div class="warning"><strong>Erro real:</strong> usar <code>&lt;Image&gt;</code> com <code>src</code> externo sem liberar o domínio. O otimizador recusa na hora:</div>
 <pre class="out">Error: Invalid src prop (https://picsum.photos/600/400) on `next/image`, hostname

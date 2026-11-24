@@ -4,14 +4,17 @@
 <script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 </head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
 <div class="pager"></div>
-<h1>Server vs Client Components</h1>
+<h1><span class="hl">Server vs Client</span> Components</h1>
 <p class="intro">Até agora as páginas da Ana eram simples demais para notar, mas chegou o momento da regra mais importante do App Router: <strong>todo componente é um Server Component por padrão</strong> — e só vira Client Component se você colocar a diretiva <code>"use client"</code> na primeira linha do arquivo. Nesta página você vai entender quando usar cada um.</p>
 <div class="note"><strong>Você vai aprender</strong><ul><li>A regra de ouro: Server por padrão; <code>"use client"</code> na 1ª linha para Client</li><li>O que o Server Component pode fazer: async, ler banco/arquivos, buscar dados, não manda JS pro navegador</li><li>O que o Client Component pode fazer: useState, useEffect, onClick, APIs do navegador</li><li>Como eles conversam: Server renderiza Client passando props serializáveis</li><li>Erros reais: evento em Server Component, "use client" fora da 1ª linha, hydration mismatch</li></ul></div>
 <hr><h2>A ideia: a cozinha (servidor) vs a mesa do cliente (navegador)</h2>
 <p>Imagine um restaurante. A <strong>cozinha</strong> (o servidor) tem acesso a tudo: o estoque, o freezer, as receitas, o caixa. Ela prepara o prato e manda pronto para a mesa. O cliente nunca entra na cozinha — ele não precisa saber de onde veio a comida. Um <strong>Server Component</strong> é a cozinha: ele pode ser <code>async</code>, ler o banco de dados, ler arquivos do disco, chamar APIs privadas com chave secreta — e depois manda para o navegador só o resultado em HTML. O código dele <strong>nunca vai para o navegador</strong>, então a chave secreta fica segura e o bundle fica leve.</p>
 <p>Já a <strong>mesa do cliente</strong> (o navegador) é onde a interação acontece: o cliente prova, pede mais, enche o copo — ele reage na hora. Um <strong>Client Component</strong> é isso: pode usar <code>useState</code> (memória que muda), <code>useEffect</code> (efeitos depois que a página carregou), <code>onClick</code> nos botões e APIs do navegador como <code>localStorage</code> e <code>window</code>. É o único tipo que aceita eventos e hooks de estado.</p>
 <p>A ponte entre os dois é simples: um Server Component pode renderizar um Client Component e passar <strong>props serializáveis</strong> (texto, número, objeto, array — qualquer coisa que dê para transformar em JSON). O que <strong>não pode</strong> passar é função (um <code>onClick</code> pronto, por exemplo) — porque o código da função não pode ir para o navegador. A regra prática da Ana: <strong>use Server Component sempre que der; só adicione <code>"use client"</code> quando precisar de interatividade ou de APIs do navegador</strong>. Quanto menos Client Components, mais leve o site.</p>
-<figure class="tela"><img src="assets/telas/server-client.png" alt="Diagrama: caixa Servidor (Server Component padrão) enviando HTML + RSC payload para a caixa Navegador (Client Component com use client)" width="1280" height="800" loading="lazy"><figcaption>O fluxo: o servidor monta o HTML + o "RSC payload" e manda pro navegador; só os componentes com "use client" ganham JavaScript interativo.</figcaption></figure>
+<figure class="tela"><img src="assets/telas/server-client-1.png" alt="Diagrama: caixa Servidor (Server Component padrão) enviando HTML + RSC payload para a caixa Navegador (Client Component com use client)" width="1280" height="800" loading="lazy"><figcaption>O fluxo: o servidor monta o HTML + o "RSC payload" e manda pro navegador; só os componentes com "use client" ganham JavaScript interativo.</figcaption></figure>
+<h2>Ana e a divisão do restaurante: a cozinha (servidor) e a mesa (navegador)</h2>
+<p>No restaurante da Ana, a <strong>cozinha</strong> prepara a comida (busca dados no banco, lê arquivos, fala com APIs usando chave secreta) e manda o prato pronto para a <strong>mesa</strong>, onde o cliente interage (clica, digita, vê animações). No Next.js, o <strong>Server Component</strong> é a cozinha — é o padrão, roda só no servidor e manda HTML pronto — e o <strong>Client Component</strong> é a mesa, marcado com <code>"use client"</code> na primeira linha do arquivo, o único que pode usar <code>useState</code>, <code>onClick</code> e APIs do navegador.</p>
+<p>A regra da Ana para não errar: se o componente <strong>não precisa de interatividade</strong>, deixa ele Server (o JS dele nem vai para o navegador — o bundle fica menor). Se precisa de clique, estado ou efeito, põe <code>"use client"</code> na primeira linha. E o servidor manda para o cliente só props serializáveis — como o prato que chega pronto, sem a receita secreta da cozinha.</p>
 <h2>Server Component (padrão) — busca dados direto</h2>
 <pre class="file" data-file="app/page.jsx">// Sem "use client": é Server Component. Pode ser async e buscar dados!
 export default async function Home() {
@@ -53,6 +56,38 @@ export default function Home() {
   );
 }</pre>
 <div class="table-wrap"><table class="ref"><tr><th></th><th>Server Component (padrão)</th><th>Client Component ("use client")</th></tr><tr><td>Onde roda</td><td>Só no servidor</td><td>Servidor (HTML) + navegador (JS interativo)</td></tr><tr><td>Pode ser async / buscar dados</td><td>✅ sim</td><td>❌ não</td></tr><tr><td>Hooks useState/useEffect</td><td>❌ não</td><td>✅ sim</td></tr><tr><td>Eventos onClick etc.</td><td>❌ não</td><td>✅ sim</td></tr><tr><td>APIs do navegador (window, localStorage)</td><td>❌ não</td><td>✅ sim</td></tr><tr><td>Chaves secretas / banco de dados</td><td>✅ seguro</td><td>❌ vaza pro navegador</td></tr><tr><td>Tamanho do JS enviado</td><td>zero</td><td>aumenta o bundle</td></tr></table></div>
+<div class="tryreact" data-goal="use client">
+<p class="try-task"><strong>Missão:</strong> o componente <code>Contador</code> usa <code>useState</code> e dá erro em Server Component. Adicione a diretiva <code>"use client";</code> na primeira linha do componente (antes de <code>function Contador()</code>). Rode ▶ e ✔.</p>
+<pre class="script" data-file="App.jsx">function Contador() {
+  const [n, setN] = React.useState(0);
+  return &lt;button onClick={() =&gt; setN(n + 1)}&gt;Cliques: {n}&lt;/button&gt;;
+}
+
+function App() {
+  return (
+    &lt;div style={{ padding: 20, fontFamily: "sans-serif" }}&gt;
+      &lt;h1&gt;Server Component (padrão)&lt;/h1&gt;
+      &lt;p&gt;Este texto é renderizado no servidor.&lt;/p&gt;
+      &lt;Contador /&gt;
+    &lt;/div&gt;
+  );
+}</pre>
+<pre class="solucao" data-file="App.jsx">function Contador() {
+  "use client";
+  const [n, setN] = React.useState(0);
+  return &lt;button onClick={() =&gt; setN(n + 1)}&gt;Cliques: {n}&lt;/button&gt;;
+}
+
+function App() {
+  return (
+    &lt;div style={{ padding: 20, fontFamily: "sans-serif" }}&gt;
+      &lt;h1&gt;Server Component (padrão)&lt;/h1&gt;
+      &lt;p&gt;Este texto é renderizado no servidor.&lt;/p&gt;
+      &lt;Contador /&gt;
+    &lt;/div&gt;
+  );
+}</pre>
+</div>
 <h2>Quando dá errado</h2>
 <div class="warning"><strong>Erro 1:</strong> a Ana pose um onClick num componente sem "use client":</div>
 <pre class="out">Error: Event handlers cannot be passed to Client Component props.

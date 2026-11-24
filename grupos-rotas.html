@@ -4,13 +4,16 @@
 <script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 </head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
 <div class="pager"></div>
-<h1>Grupos de rotas <code>(grupo)</code></h1>
+<h1><span class="hl">Grupos de rotas</span> <code>(grupo)</code></h1>
 <p class="intro">A Ana 👩‍💻 estava montando um site com duas "áreas": a <strong>loja</strong> (home, produto, carrinho) e o <strong>marketing</strong> (sobre, contato). Ela queria um layout diferente para cada área — cabeçalho de loja num lado, institucional do outro — mas não queria que a URL ficasse <code>/loja/produto/1</code>. A solução foram as pastas entre <strong>parênteses</strong>: <code>(shop)</code> e <code>(marketing)</code>.</p>
 <div class="note"><strong>Você vai aprender</strong><ul><li>Por que <code>(nome)</code> organiza o projeto sem virar URL</li><li>Dar um <code>layout.jsx</code> exclusivo para um grupo de rotas</li><li>Ter vários layouts raiz (um por grupo) no mesmo app</li><li>Nomear rotas iguais em grupos diferentes sem conflito</li></ul></div>
 <hr><h2>A ideia: pastas com nome de sala, não de endereço</h2>
 <p>Imagine um prédio comercial: no térreo há duas recepções — uma da loja, uma do coworking. Cada recepcionista (cada <code>layout.jsx</code>) atende só quem entra pela porta dela, mas o <strong>endereço do prédio não muda</strong>: não existe rua chamada "recepção-da-loja". A pasta <code>(shop)</code> funciona assim: ela existe no disco, organiza os arquivos e carrega o layout do grupo, mas o texto entre parênteses <strong>nunca aparece na URL</strong>.</p>
 <p>É por isso que dá para ter <code>app/(shop)/page.jsx</code> e <code>app/(marketing)/page.jsx</code> ao mesmo tempo: ambas respondem por <code>/</code>? Não — dá conflito, e o Next.js avisa. O truque é que dentro de cada grupo você pode repetir nomes de rota livremente: <code>(shop)/produto/[id]/page.jsx</code> vira <code>/produto/1</code>, e <code>(marketing)/produto/page.jsx</code> (uma página "sobre o produto") também poderia existir sem bater boca, porque os caminhos completos são diferentes.</p>
 <p>E o layout? Cada grupo pode ter o seu próprio <code>layout.jsx</code>, que envolve só as páginas daquele grupo — o layout raiz <code>app/layout.jsx</code> continua envolvendo tudo por fora. Resultado: a loja usa cabeçalho de loja, o marketing usa cabeçalho institucional, e a URL continua limpa.</p>
+<h2>Ana organiza os andares do prédio: (marketing) e (loja) no mesmo endereço</h2>
+<p>Num prédio comercial, a Ana pode ter a <strong>loja no térreo</strong> (<code>meusite.com.br/</code>) e o <strong>marketing no segundo andar</strong> (<code>meusite.com.br/sobre</code>) — o endereço é o mesmo, mas os andares são separados, cada um com a sua recepção. No Next.js, a pasta entre <strong>parênteses</strong> — <code>(grupo)</code> — faz exatamente isso: ela <strong>organiza sem entrar na URL</strong>. <code>app/(loja)/page.jsx</code> vira <code>/</code>, e <code>app/(marketing)/sobre/page.jsx</code> vira <code>/sobre</code>, e cada grupo pode ter o seu próprio <code>layout.jsx</code>.</p>
+<p>É como ter duas recepções no mesmo prédio: o visitante não vê "(marketing)" no endereço, mas cada área tem a sua cara. A Ana usa grupo quando quer layouts diferentes (loja com vitrine, blog com sidebar) sem sujar a URL com prefixos.</p>
 <h2>Na prática: loja + marketing no mesmo app</h2>
 <pre class="file" data-file="estrutura de pastas">app/
 ├─ layout.jsx                  ← layout raiz (html, body, fonte…)
@@ -92,7 +95,7 @@
     &lt;/div&gt;
   );
 }</pre></div>
-<figure class="tela"><img src="assets/telas/grupos-rotas.png" alt="Estrutura de pastas mostrando (shop) e (marketing) com layouts próprios, sem virar URL" width="1280" height="800" loading="lazy"><figcaption><code>(shop)/produto/[id]</code> vira <code>/produto/1</code>: o nome do grupo organiza o código, mas não aparece no endereço.</figcaption></figure>
+<figure class="tela"><img src="assets/telas/grupos-rotas-1.png" alt="Estrutura de pastas mostrando (shop) e (marketing) com layouts próprios, sem virar URL" width="1280" height="800" loading="lazy"><figcaption><code>(shop)/produto/[id]</code> vira <code>/produto/1</code>: o nome do grupo organiza o código, mas não aparece no endereço.</figcaption></figure>
 <h2>Quando dá errado</h2>
 <div class="warning"><strong>Erro:</strong> criar duas rotas finais iguais em grupos diferentes. É o erro mais comum de grupo:</div>
 <pre class="out">Error: You cannot use different slug names for the same dynamic path ("id" !== "slug").

@@ -14,7 +14,7 @@
 <main class="main">
 <div class="content">
 <div class="pager"></div>
-<h1>Variáveis de ambiente: .env, NEXT_PUBLIC_ e secrets</h1>
+<h1><span class="hl">Variáveis de ambiente</span>: .env, NEXT_PUBLIC_ e secrets</h1>
 <p class="intro">A Ana cometeu o erro clássico: colocou a chave da API de pagamento dentro do código, commitou no GitHub e o bot dela achou a chave em 40 segundos. Nesta aula você aprende a regra de ouro do Next.js: <strong> só variáveis com prefixo <code>NEXT_PUBLIC_</code> vão para o navegador</strong> — todo o resto fica só no servidor, e o que é segredo mora no painel da Vercel, nunca no repositório.</p>
 <div class="note"><strong>Você vai aprender</strong><ul>
 <li>Os arquivos <code>.env</code>, <code>.env.local</code>, <code>.env.production</code> e a ordem de prioridade</li>
@@ -28,6 +28,9 @@
 <h2>A ideia: o crachá público e a chave do cofre</h2>
 <p>Toda empresa tem dois tipos de crachá: o <strong>crachá de visitante</strong>, que pode ser lido por qualquer um na portaria (nome, foto, empresa) — e a <strong>chave do cofre</strong>, que fica com o gerente e nunca sai do bolso. No Next.js, as variáveis <code>NEXT_PUBLIC_*</code> são o crachá de visitante: na hora do build, o valor é <em>embutido no JavaScript que vai para o navegador</em> — qualquer pessoa pode abrir o DevTools, ir em Sources e ler. Já as variáveis sem prefixo são a chave do cofre: ficam só no servidor, onde o navegador nunca chega.</p>
 <p>A regra da Ana ficou simples: <strong>se o valor pode ser público (URL da API, nome do app, chave pública do Stripe), pode ter <code>NEXT_PUBLIC_</code>. Se é segredo (chave secreta do Stripe, token do banco, senha de SMTP), não tem prefixo e só é lida no servidor</strong> — em Server Components, Server Actions e route handlers (<code>app/api/.../route.js</code>). Um detalhe importante: mudar uma variável <code>NEXT_PUBLIC_</code> exige <em>rebuild</em>, porque o valor foi embutido no código; mudar uma de servidor não (só reiniciar/redeploy).</p>
+<h2>Ana e as duas chaves do molho: uma pública na porta, outra no cofre</h2>
+<p>A loja da Ana tem duas chaves: uma que fica <strong>na porta, visível para todo mundo</strong> (o número do endereço, o telefone) e outra que fica <strong>no cofre</strong> (a senha do cofre, a chave do estoque). As <strong>variáveis de ambiente</strong> funcionam igual: as que começam com <code>NEXT_PUBLIC_</code> são embutidas no código que vai para o navegador — todo mundo vê; as outras ficam só no servidor, seguras. A Ana aprendeu do jeito difícil: chave nenhuma sem o prefixo deve sair do servidor.</p>
+<p>Os valores moram nos arquivos <code>.env</code> (local, não vai para o git — está no <code>.gitignore</code>) e no painel da Vercel (produção). Regra prática da Ana: URL de API pública, ID do analytics → <code>NEXT_PUBLIC_...</code>; chave da API de pagamento, senha do banco, secret de sessão → sem prefixo, só no servidor, e nunca dentro de um Client Component.</p>
 <h2>Os arquivos .env e quem lê o quê</h2>
 <pre class="file" data-file=".env.example"># COMMITADO no git — só os nomes, sem valores reais (o time sabe o que existe)
 NEXT_PUBLIC_API_URL=
@@ -100,7 +103,7 @@ function App() {
     &lt;/div&gt;
   );
 }</pre></div>
-<figure class="tela"><img src="assets/telas/n3-env.png" alt="Variáveis de ambiente no painel da Vercel por escopo" width="1280" height="800" loading="lazy"><figcaption>Na Vercel, cada variável é setada por escopo (Production/Preview/Development) — nunca no código.</figcaption></figure>
+<figure class="tela"><img src="assets/telas/variaveis-ambiente-1.png" alt="Variáveis de ambiente no painel da Vercel por escopo" width="1280" height="800" loading="lazy"><figcaption>Na Vercel, cada variável é setada por escopo (Production/Preview/Development) — nunca no código.</figcaption></figure>
 <h2>Quando dá errado</h2>
 <div class="warning"><strong>O desastre:</strong> a chave secreta vazou. Se você commitar <code>.env.local</code> no git, o valor fica no histórico <strong>para sempre</strong> — mesmo apagando depois. A correção: trocar a chave no provedor (Stripe/Google), adicionar <code>.env*.local</code> no <code>.gitignore</code>, e limpar o histórico com <code>git filter-repo</code> (ou recriar o repositório).</div>
 <pre class="out">$ git log --all --full-history -- .env.local   # mostra o vazamento

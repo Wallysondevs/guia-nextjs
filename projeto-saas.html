@@ -14,7 +14,7 @@
 <main class="main">
 <div class="content">
 <div class="pager"></div>
-<h1>Projeto: SaaS básico — auth, banco e assinatura</h1>
+<h1>Projeto: <span class="hl">SaaS</span> básico — auth, banco e assinatura</h1>
 <p class="intro">A Ana quer transformar o app dela num produto pago: cada usuário tem conta própria, dados no banco e um plano (grátis ou pro). Neste projeto você monta a base de um SaaS: <strong>Auth.js</strong> para login, <strong>Prisma</strong> para o banco (SQLite em dev, Postgres na Vercel), <strong>Stripe Billing</strong> para assinatura e <code>middleware</code> protegendo as rotas pagas.</p>
 <div class="note"><strong>Você vai aprender</strong><ul>
 <li>Auth.js (NextAuth v5): <code>auth.js</code> na raiz, rotas <code>/api/auth/[...nextauth]</code>, <code>auth()</code> no servidor</li>
@@ -26,6 +26,9 @@
 <hr>
 <h2>A ideia: o clube com carteirinha e catraca</h2>
 <p>Um SaaS é como um clube: a <strong>catraca na porta</strong> é o login (só quem tem carteirinha entra — Auth.js guarda a sessão num cookie seguro), o <strong>arquivo de sócios</strong> é o banco de dados (Prisma guarda usuário, assinatura, pagamentos), e a <strong>área VIP</strong> é a rota paga, que só abre se o plano do sócio for "pro" (checado no servidor, nunca só no navegador). A mensalidade é cobrada pelo Stripe em modo <code>subscription</code>, e o próprio Stripe hospeda o portal onde o cliente troca o cartão e cancela — seu servidor só recebe o webhook avisando o que mudou.</p>
+<h2>Ana abre o clube: carteirinha para entrar, catraca para contar, backoffice no fundo</h2>
+<p>O clube da Ana funciona com <strong>carteirinha</strong>: quem não tem login não passa da catraca — e a catraca (o middleware) confere a carteirinha em todas as portas ao mesmo tempo. No SaaS dela acontece o mesmo: o <code>middleware</code> protege todas as rotas internas conferindo a sessão, o banco guarda usuários, planos e assinaturas, e só quem pagou vê a área de assinante.</p>
+<p>E a assinatura é cobrada pela maquininha (Stripe Billing): a Ana cadastra os planos no painel, o cliente assina pelo checkout hospedado, e o webhook avisa o servidor dela "pagou!" para liberar o acesso. Ela nunca vê o número do cartão — igual no clube, a catraca só lê a carteirinha, não o RG.</p>
 <h2>Passo 1 — Auth.js (login) e Prisma (banco)</h2>
 <pre class="file" data-file="terminal">npm install next-auth@beta prisma @prisma/client
 npx prisma init --datasource sqlite   # em dev; em produção: Vercel Postgres (DATABASE_URL)</pre>
@@ -171,7 +174,7 @@ STRIPE_SECRET_KEY=sk_test_…
 STRIPE_PRICE_PRO=price_…
 STRIPE_WEBHOOK_SECRET=whsec_…
 NEXT_PUBLIC_URL=http://localhost:3000</pre>
-<figure class="tela"><img src="assets/telas/proj-saas.png" alt="SaaS com login, plano free/pro e assinatura Stripe" width="1280" height="800" loading="lazy"><figcaption>Login com Auth.js, plano do usuário lido no banco via Prisma e upgrade/gerenciar assinatura pelo Stripe.</figcaption></figure>
+<figure class="tela"><img src="assets/telas/projeto-saas-1.png" alt="SaaS com login, plano free/pro e assinatura Stripe" width="1280" height="800" loading="lazy"><figcaption>Login com Auth.js, plano do usuário lido no banco via Prisma e upgrade/gerenciar assinatura pelo Stripe.</figcaption></figure>
 <div class="tryreact" data-goal="plano"><p class="try-task"><strong>Missão:</strong> no componente abaixo, a área VIP está liberada para qualquer um. Complete a condição para só mostrar a área pro quando <code>usuario.plano === 'pro'</code>: use <code>{usuario.plano === 'pro' && &lt;AreaPro /&gt;}</code>. Rode e clique em <em>Verificar missão</em>.</p><pre class="script" data-file="app/dashboard/page.jsx">function AreaPro() { return &lt;p&gt;🚀 Área PRO liberada (dados avançados)&lt;/p&gt;; }
 
 function App() {

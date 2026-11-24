@@ -4,13 +4,16 @@
 <script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 </head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
 <div class="pager"></div>
-<h1>Cookies e sessões básicas</h1>
+<h1><span class="hl">Cookies</span> e sessões básicas</h1>
 <p class="intro">A Ana 👩‍💻 queria que o visitante ficasse "logado" entre páginas sem mandar token no JavaScript. A resposta é o <strong>cookie httpOnly</strong>: um bilhete que o navegador guarda e manda de volta sozinho em cada pedido — o servidor lê com <code>await cookies()</code>, e só uma Server Action ou Route Handler pode <strong>escrever</strong> (<code>cookies().set</code>). Nesta página você monta uma sessão básica de login.</p>
 <div class="note"><strong>Você vai aprender</strong><ul><li><code>await cookies()</code> e <code>await headers()</code> em Server Components (Next 15 é async!)</li><li>Ler cookie: <code>store.get("sessao")?.value</code></li><li>Gravar/apagar cookie só em Server Action ou Route Handler</li><li>Opções: <code>httpOnly</code>, <code>path</code>, <code>maxAge</code>, <code>secure</code>, <code>sameSite</code></li><li>Uma sessão básica: login grava, página protege, logout apaga</li></ul></div>
 <hr><h2>A ideia: o crachá plastificado que o segurança carimba na entrada</h2>
 <p>Em um evento, na entrada o segurança carimba um <strong>crachá plastificado</strong> (o cookie) e te entrega. A partir daí, em cada porta interna, o segurança só olha o seu crachá — você não precisa mostrar documento de novo. O navegador faz exatamente isso: guarda o cookie e manda no header <code>Cookie:</code> de cada requisição sozinho.</p>
 <p>No Next.js 15, ler esse crachá no servidor é <code>const store = await cookies(); store.get("sessao")?.value</code> — dentro de um Server Component, Server Action ou Route Handler. É <strong>async</strong> agora (migração importante do Next 15). E gravar? Só dá para gravar ou apagar cookie dentro de uma <strong>Server Action</strong> ou <strong>Route Handler</strong> — nunca numa página renderizada, porque a resposta HTML já está sendo montada; o lugar certo é a action de login/logout.</p>
 <p>Para sessão, o padrão ouro é <code>httpOnly: true</code> (o JavaScript do navegador não consegue ler o cookie — protege contra roubo por XSS) + <code>secure: true</code> em produção (só HTTPS) + <code>sameSite: "lax"</code> (protege contra CSRF básico) + <code>maxAge</code> em segundos. Em produção real, troque o valor por um token assinado/JWT — aqui a Ana usa um valor simples só para aprender.</p>
+<h2>Ana e o bilhete de entrada do show: provar quem você é sem mostrar o RG</h2>
+<p>Na entrada de um show, a Ana mostra o RG uma vez e recebe um <strong>bilhete plastificado</strong> no peito. Dali em diante ela só mostra o bilhete — o segurança não precisa ver o documento de novo, e o bilhete não pode ser falsificado porque tem o carimbo da casa. Um <strong>cookie de sessão</strong> é esse bilhete: o servidor assina um identificador (<code>httpOnly</code>, para o JavaScript do navegador não tocar) e a cada requisição o navegador devolve o bilhete provando quem é a Ana.</p>
+<p>A sessão é o que o bilhete <em>aponta</em>: no servidor fica um registro "bilhete nº 123 = Ana, logada às 14h". Quando a Ana faz logout, o servidor rasga o registro — o bilhete continua no navegador, mas não vale mais nada, como um ingresso de show depois que o evento acabou.</p>
 <h2>Ler cookies e headers no servidor</h2>
 <pre class="file" data-file="app/painel/page.jsx">import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -132,7 +135,7 @@ export default function LoginForm() {
     &lt;/div&gt;
   );
 }</pre></div>
-<figure class="tela"><img src="assets/telas/cookies-sessoes.png" alt="Página lendo cookie de sessão com await cookies() e action de login gravando o cookie httpOnly" width="1280" height="800" loading="lazy"><figcaption>Fluxo da sessão: <code>entrar()</code> grava o cookie httpOnly → <code>/painel</code> lê com <code>await cookies()</code> e redireciona se não houver → <code>sair()</code> apaga.</figcaption></figure>
+<figure class="tela"><img src="assets/telas/cookies-sessoes-1.png" alt="Página lendo cookie de sessão com await cookies() e action de login gravando o cookie httpOnly" width="1280" height="800" loading="lazy"><figcaption>Fluxo da sessão: <code>entrar()</code> grava o cookie httpOnly → <code>/painel</code> lê com <code>await cookies()</code> e redireciona se não houver → <code>sair()</code> apaga.</figcaption></figure>
 <h2>Quando dá errado</h2>
 <div class="warning"><strong>Erro:</strong> tentar gravar cookie durante a renderização da página — a API nova avisa na hora:</div>
 <pre class="out">Error: Cookies can only be modified in a Server Action or Route Handler.

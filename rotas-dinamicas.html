@@ -4,7 +4,7 @@
 <script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 </head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
 <div class="pager"></div>
-<h1>Rotas dinâmicas <code>[id]</code></h1>
+<h1><span class="hl">Rotas dinâmicas</span> <code>[id]</code></h1>
 <p class="intro">A Ana 👩‍💻 tinha um blog estático: uma página para cada post, escrita na mão. Quando o blog ganhou 50 posts, criar página nova virou um trabalho braçal. A solução dela foi uma <strong>pasta com colchetes</strong> — <code>app/blog/[id]/page.jsx</code> — que atende <em>qualquer</em> post. Nesta página você vai construir exatamente isso.</p>
 <div class="note"><strong>Você vai aprender</strong><ul><li>Por que a pasta <code>[id]</code> vira uma rota curinga (ex: <code>/blog/42</code>)</li><li>Como ler o valor do segmento com <code>await params</code> no Next.js 15</li><li>Gerar título e descrição por rota com <code>generateMetadata</code></li><li>Disparar o 404 com <code>notFound()</code></li></ul></div>
 <hr><h2>A ideia: a gaveta etiquetada "nº ___"</h2>
@@ -114,7 +114,7 @@ export default async function BlogPostPage({ params }) {
     &lt;/div&gt;
   );
 }</pre></div>
-<figure class="tela"><img src="assets/telas/rotas-dinamicas.png" alt="Página dinâmica /blog/42 renderizando um post, com o código de app/blog/[id]/page.jsx ao lado" width="1280" height="800" loading="lazy"><figcaption>A mesma página <code>app/blog/[id]/page.jsx</code> servindo <code>/blog/42</code> e devolvendo 404 para <code>/blog/99</code> quando o post não existe.</figcaption></figure>
+<figure class="tela"><img src="assets/telas/rotas-dinamicas-1.png" alt="Página dinâmica /blog/42 renderizando um post, com o código de app/blog/[id]/page.jsx ao lado" width="1280" height="800" loading="lazy"><figcaption>A mesma página <code>app/blog/[id]/page.jsx</code> servindo <code>/blog/42</code> e devolvendo 404 para <code>/blog/99</code> quando o post não existe.</figcaption></figure>
 <h2>Quando dá errado</h2>
 <div class="warning"><strong>Erro:</strong> inesquecer o <code>await</code> no <code>params</code>. No Next.js 15, usar <code>params.id</code> direto acusa na hora — a mensagem real aparece no terminal e na página de erro do dev:</div>
 <pre class="out">Error: Route "/blog/[id]" used `params.id`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis</pre>

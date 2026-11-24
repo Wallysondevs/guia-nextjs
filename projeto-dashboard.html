@@ -14,7 +14,7 @@
 <main class="main">
 <div class="content">
 <div class="pager"></div>
-<h1>Projeto: Dashboard com auth, gráficos e tabela</h1>
+<h1>Projeto: <span class="hl">Dashboard</span> com auth, gráficos e tabela</h1>
 <p class="intro">A Ana precisa de um painel interno para ver as vendas: só quem está logado pode entrar, a tabela de pedidos é grande (pagina no servidor) e o gráfico é pesado (carrega só no navegador). Neste projeto você monta esse dashboard juntando proteção de rotas com <code>middleware</code>, dados assíncronos no servidor e um componente de gráfico isolado num chunk separado.</p>
 <div class="note"><strong>Você vai aprender</strong><ul>
 <li>Login simples: Server Action que seta um <code>cookie httpOnly</code> de sessão</li>
@@ -27,6 +27,9 @@
 <h2>A ideia: a sala do gerente com crachá na porta</h2>
 <p>O dashboard é a <strong>sala do gerente</strong>: só entra quem mostra o crachá na porta. Esse crachá é um <strong>cookie httpOnly</strong> (o navegador manda sozinho em toda requisição, mas o JavaScript da página não consegue ler — então não dá para roubar por XSS), conferido pelo <code>middleware</code> em todas as rotas de <code>/dashboard</code>. Dentro da sala, a tabela de pedidos é paginada <strong>no servidor</strong> (a página 2 vem pronta do servidor via <code>?pagina=2</code>, não com 10 mil linhas no navegador), e o gráfico, que é pesado, só é montado no navegador.</p>
 <p>O truque do gráfico: bibliotecas de gráfico acessam <code>window</code> e quebram o SSR. A solução é o <code>dynamic(() => import('./Grafico'), { ssr: false })</code> dentro de um Client Component — o chunk baixa só quando a página do dashboard abre, e o resto do app continua leve (você viu isso na aula de bundle).</p>
+<h2>Ana monta a sala do gerente: só quem tem o crachá entra, e tudo está à mão</h2>
+<p>O dashboard da Ana é a sala do gerente da loja: só entra quem tem o <strong>crachá de funcionário</strong> (login com cookie <code>httpOnly</code>, conferido pelo middleware em toda página interna) e, lá dentro, tudo está à mão — gráfico de vendas do dia, tabela de pedidos, números grandes no topo. Em Next.js, essa sala é um conjunto de rotas protegidas (<code>app/painel/…</code>) servidas com dados do servidor: a página já chega com os números prontos, não com um gráfico que carrega depois no navegador.</p>
+<p>A tabela de pedidos é o componente mais pesado da sala — e é ela quem o <code>&lt;Suspense&gt;</code> atrasa enquanto busca no banco, deixando o resto do painel utilizável na hora. A lição da Ana: no dashboard, o resumo fica rápido no topo; o detalhe pesado (tabela, relatório) vai num componente async com fallback de loading.</p>
 <h2>Passo 1 — login com cookie httpOnly + middleware</h2>
 <pre class="file" data-file="app/login/actions.js">'use server';
 
@@ -170,7 +173,7 @@ export default function GraficoVendas() {
     &lt;/LineChart&gt;
   );
 }</pre>
-<figure class="tela"><img src="assets/telas/proj-dashboard.png" alt="Dashboard protegido com tabela paginada e gráfico" width="1280" height="800" loading="lazy"><figcaption>Dashboard protegido por middleware, com tabela paginada no servidor e gráfico carregado só no cliente.</figcaption></figure>
+<figure class="tela"><img src="assets/telas/projeto-dashboard-1.png" alt="Dashboard protegido com tabela paginada e gráfico" width="1280" height="800" loading="lazy"><figcaption>Dashboard protegido por middleware, com tabela paginada no servidor e gráfico carregado só no cliente.</figcaption></figure>
 <div class="tryreact" data-goal="ssr"><p class="try-task"><strong>Missão:</strong> no código abaixo, o gráfico está comentado. Complete a linha do dynamic import com a opção que <strong>desliga o SSR</strong> do componente (o gráfico só pode renderizar no navegador): <code>{ ssr: false }</code>. Rode e clique em <em>Verificar missão</em>.</p><pre class="script" data-file="app/dashboard/page.jsx">// no Next.js: import dynamic from 'next/dynamic';
 const dynamic = (fn, opts) =&gt; fn().then ? null : null; // (simulação)
 

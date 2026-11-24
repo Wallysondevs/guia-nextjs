@@ -14,7 +14,7 @@
 <main class="main">
 <div class="content">
 <div class="pager"></div>
-<h1>Deploy na Vercel: push no GitHub e no ar</h1>
+<h1>Deploy na <span class="hl">Vercel</span>: push no GitHub e no ar</h1>
 <p class="intro">Até aqui o app da Ana vivia só no <code>localhost</code> dela. Hoje ela vai colocar no ar de verdade: basta conectar o repositório do GitHub na <strong>Vercel</strong> e cada <code>git push</code> na <code>main</code> vira um deploy automático de produção — e cada branch ou Pull Request ganha uma URL de <em>preview</em> para testar antes. Nesta aula você faz esse caminho inteiro.</p>
 <div class="note"><strong>Você vai aprender</strong><ul>
 <li>Criar o projeto na Vercel apontando para o repositório do GitHub</li>
@@ -28,6 +28,9 @@
 <h2>A ideia: a loja com vitrine na rua e a versão de teste nos fundos</h2>
 <p>Publicar na Vercel é como abrir uma loja: a <strong>endereço principal</strong> (<code>meusite.vercel.app</code>, ou o domínio próprio) é a vitrine de produção — só entra o que passou no controle de qualidade, ou seja, o que está na branch <code>main</code> depois de um push. Já cada <strong>branch nova</strong> ganha uma URL temporária nos fundos da loja (o preview), onde o time testa a reforma antes de trocar a vitrine de verdade. E se a vitrine nova quebrar, você volta para a anterior em um clique (rollback) — sem rebuild, porque cada deploy guarda uma cópia pronta.</p>
 <p>O fluxo inteiro é: <code>git push origin main</code> → o GitHub avisa a Vercel → a Vercel clona o código, roda <code>npm install</code> e <code>next build</code> numa máquina limpa → gera os estáticos, testa e publica → em segundos a URL de produção já serve a versão nova. Se o build falhar, a produção <strong>continua no ar</strong> com a versão anterior — o deploy novo só entra se o build passar inteiro.</p>
+<h2>Ana inaugura a loja de verdade: o depósito vira vitrine na rua principal</h2>
+<p>Durante semanas a loja da Ana funcionou só no depósito (localhost). Chegou a hora de <strong>inaugurar na rua principal</strong>: ela sobe o projeto no GitHub (a planta do prédio vai para o cartório público) e a Vercel, conectada ao repositório, constrói e publica o site a cada <code>git push</code> — cada branch vira uma URL de preview, e o <code>main</code> vira a produção. Sem servidor para configurar, sem FTP, sem "funcionou na minha máquina".</p>
+<p>A cada push a Vercel roda o <code>next build</code>, gera as páginas estáticas, configura HTTPS e CDN (a loja com vitrine em várias esquinas do mundo, servida do lugar mais perto do cliente) e deixa o site no ar em minutos. Se algo quebrar no build, a versão anterior continua no ar — a inauguração nunca deixa a loja vazia.</p>
 <h2>Passo a passo</h2>
 <pre class="file" data-file="terminal"># 1) suba o projeto pro GitHub (se ainda não subiu)
 git init
@@ -85,7 +88,7 @@ function App() {
     &lt;/div&gt;
   );
 }</pre></div>
-<figure class="tela"><img src="assets/telas/n3-vercel-deploy.png" alt="Painel da Vercel com deploys de produção e preview" width="1280" height="800" loading="lazy"><figcaption>Cada push na main vira deploy de produção; cada branch/PR ganha um preview com URL própria.</figcaption></figure>
+<figure class="tela"><img src="assets/telas/vercel-deploy-1.png" alt="Painel da Vercel com deploys de produção e preview" width="1280" height="800" loading="lazy"><figcaption>Cada push na main vira deploy de produção; cada branch/PR ganha um preview com URL própria.</figcaption></figure>
 <h2>Quando dá errado</h2>
 <div class="warning"><strong>O clássico "funciona na minha máquina":</strong> o build passa no notebook da Ana e quebra na Vercel. Quase sempre é diferença de versão do Node (a Vercel usa a versão do <code>package.json</code> → campo <code>"engines"</code>) ou arquivo commitado errado ( faltou <code>.gitignore</code> com <code>.env.local</code> — aula de variáveis). Veja em: Vercel → Deploy → Build Logs:</div>
 <pre class="out">npm ERR! code ENOENT …  /  Failed at the meu-app@1.0.0 build script.

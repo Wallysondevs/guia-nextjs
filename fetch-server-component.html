@@ -4,13 +4,16 @@
 <script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 </head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
 <div class="pager"></div>
-<h1>Fetch em Server Component</h1>
+<h1>Fetch em <span class="hl">Server Component</span></h1>
 <p class="intro">A Ana 👩‍💻 descobriu que, no App Router, ela <strong>não precisa mais de <code>useEffect</code> para buscar dados</strong>. A página dela é um Server Component: a função dela roda no servidor, faz <code>fetch</code> direto, e o navegador recebe só o HTML pronto. O JavaScript da busca nunca vai para o cliente. Nesta página você vai dominar esse fetch no servidor e o cache que vem de brinde.</p>
 <div class="note"><strong>Você vai aprender</strong><ul><li>Por que Server Component pode ser <code>async</code> e dar <code>await fetch</code> direto</li><li>O cache padrão do fetch no Next.js (Data Cache)</li><li><code>cache: "no-store"</code> para dados sempre frescos</li><li><code>next: { revalidate: 60 }</code> e <code>next: { tags: […] }</code></li><li>Dedupe automático: o mesmo fetch em vários componentes chama a API só uma vez</li></ul></div>
 <hr><h2>A ideia: a cozinha que busca o ingrediente vs. o garçom que anota o pedido</h2>
 <p>Num site antigo em React puro, o navegador (o garçom) pedia os dados para a API depois que a página já tinha carregado — por isso você via <code>useEffect</code>, <code>loading…</code> e um segundo de tela piscando. No App Router, quem vai à cozinha buscar o ingrediente é o <strong>cozinheiro</strong> (o servidor): a página é montada já com os dados na mão, e o garçom só entrega o prato pronto.</p>
 <p>E o cardápio? O Next.js estende o <code>fetch</code> padrão com um <strong>cache automático</strong>: se dez componentes pedirem a mesma URL na mesma renderização, a API só é chamada uma vez (isso se chama <em>request memoization</em>). E entre renderizações, o resultado fica guardado no Data Cache — por padrão, no modo estático, o fetch é cacheado "para sempre" até o próximo build; no modo dinâmico, vale enquanto durar a requisição.</p>
 <p>Você controla a validade com duas opções: <code>next: { revalidate: 60 }</code> guarda o resultado por 60 segundos (depois disso, a próxima visita busca de novo em segundo plano), e <code>next: { tags: ["posts"] }</code> dá uma <em>etiqueta</em> para o cache — aí basta chamar <code>revalidateTag("posts")</code> (veremos na próxima página) para invalidar tudo de uma vez. Para dados que nunca podem ficar velhos (ex: saldo bancário), use <code>cache: "no-store"</code>.</p>
+<h2>Ana pede a pizza pelo telefone e recebe a pizza pronta, não a receita</h2>
+<p>Quando a Ana pede pizza, ela não vai à cozinha buscar os ingredientes e preparar — ela <strong>liga, pede, e recebe a pizza pronta</strong>. Um Server Component funciona assim: ele chama <code>await fetch(...)</code> no servidor (onde fica a cozinha, perto do banco de dados e das chaves secretas), espera a resposta e entrega a página já <strong>pronta, em HTML</strong>, para o navegador. O navegador nem fica sabendo que houve uma busca — igual a quem recebe a pizza não vê a cozinha.</p>
+<p>Isso muda o jogo: o código do fetch <strong>não vai para o navegador</strong>, então a chave de API fica segura; e o HTML já chega pronto, então o Google lê o conteúdo na hora. A única regra da Ana: o componente que faz fetch vira <code>async</code> — e pronto, a "pizza" chega quentinha.</p>
 <h2>Buscando dados na página</h2>
 <pre class="file" data-file="app/page.jsx (Server Component — sem "use client")">export default async function Home() {
   // roda NO SERVIDOR. A URL da API não aparece no navegador.
@@ -46,7 +49,7 @@ const res = await fetch(url); // ou { cache: "force-cache" }</pre>
 <tr><td><code>{ next: { tags: ["posts"] } }</code></td><td>cache marcado com etiqueta</td><td>junto com <code>revalidateTag("posts")</code> após mutações</td></tr>
 <tr><td>mesmo fetch em N componentes</td><td>API chamada 1x por renderização (memoization)</td><td>automático — só funciona dentro do mesmo request</td></tr>
 </table>
-<div class="tryreact" data-goal="useEffect|fetch\("><p class="try-task"><strong>Missão:</strong> a Ana fazia a busca no navegador com <code>useEffect</code> e via "carregando…" piscando. Simule a versão <em>nova</em>: no Server Component os dados já chegam prontos. Complete o componente <code>Post</code> para receber <code>post</code> por <em>prop</em> (sem fetch dentro) e renderizar o título — o App já "busca" os dados antes.</p><pre class="script" data-file="App.jsx">// no servidor (App Router): const posts = await fetch(...).json()
+<div class="tryreact" data-goal="post\.titulo"><p class="try-task"><strong>Missão:</strong> a Ana fazia a busca no navegador com <code>useEffect</code> e via "carregando…" piscando. Simule a versão <em>nova</em>: no Server Component os dados já chegam prontos. Complete o componente <code>Post</code> para receber <code>post</code> por <em>prop</em> (sem fetch dentro) e renderizar o título — o App já "busca" os dados antes.</p><pre class="script" data-file="App.jsx">// no servidor (App Router): const posts = await fetch(...).json()
 // aqui já chegamos com os dados prontos:
 const posts = [
   { id: "1", titulo: "Post já chegou pronto do servidor ✔" },
@@ -82,7 +85,7 @@ function App() {
     &lt;/ul&gt;
   );
 }</pre></div>
-<figure class="tela"><img src="assets/telas/fetch-server-component.png" alt="Página no servidor fazendo fetch com revalidate 60 e o terminal mostrando a segunda requisição atendida pelo cache" width="1280" height="800" loading="lazy"><figcaption>A 1ª visita busca na API (210ms); a 2ª, dentro dos 60s, vem do cache (4ms); passados 60s, o Next.js revalida em segundo plano.</figcaption></figure>
+<figure class="tela"><img src="assets/telas/fetch-server-component-1.png" alt="Página no servidor fazendo fetch com revalidate 60 e o terminal mostrando a segunda requisição atendida pelo cache" width="1280" height="800" loading="lazy"><figcaption>A 1ª visita busca na API (210ms); a 2ª, dentro dos 60s, vem do cache (4ms); passados 60s, o Next.js revalida em segundo plano.</figcaption></figure>
 <h2>Quando dá errado</h2>
 <div class="warning"><strong>Erro:</strong> tentar dar <code>fetch</code> com <code>useEffect</code> dentro de um Server Component — ou confundir os dois mundos:</div>
 <pre class="out">Error: useEffect is not supported in Server Components. You likely forgot "use client" — or the data can be fetched directly in the Server Component with await fetch().</pre>

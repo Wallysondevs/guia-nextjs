@@ -4,13 +4,16 @@
 <script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 </head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
 <div class="pager"></div>
-<h1>Rodando o servidor de dev</h1>
+<h1>Rodando o <span class="hl">servidor de dev</span></h1>
 <p class="intro">O projeto da Ana está pronto na pasta, mas ainda não existe nenhum site no ar. Nesta página você vai ligar o <strong>servidor de desenvolvimento</strong> com um comando só, abrir o navegador em <code>http://localhost:3000</code> e entender o que é o hot reload — a mágica que salva o arquivo e já atualiza a página.</p>
 <div class="note"><strong>Você vai aprender</strong><ul><li>O que o <code>npm run dev</code> faz (e de onde vem esse script)</li><li>O que é <code>localhost:3000</code> e por que a porta 3000</li><li>Hot reload / Fast Refresh: salvar o arquivo atualiza a página sem perder o estado</li><li>Diferença entre dev (<code>npm run dev</code>), build (<code>npm run build</code>) e start (<code>npm start</code>)</li><li>Como trocar de porta e como parar o servidor (Ctrl+C)</li></ul></div>
 <hr><h2>A ideia: dev é a bancada de teste, produção é a loja aberta</h2>
 <p>Imagine que a Ana está montando uma loja nova. A <strong>bancada de teste</strong> (a bancada de trabalho dela, com ferramentas espalhadas) é o modo de desenvolvimento: qualquer ajuste que ela faz numa peça aparece na hora na bancada — ela não precisa desmontar e remontar a loja inteira. Esse é o <code>npm run dev</code>: o servidor de desenvolvimento, que compila seu código <em>na hora</em> e, quando você salva um arquivo, recarrega só o que mudou direto no navegador. Chamamos isso de <strong>hot reload</strong> (recarga quente) ou <strong>Fast Refresh</strong> no Next.js — e a gracia é que ele <em>preserva o estado</em> dos componentes: se você estava preenchendo um formulário, ele não zera.</p>
 <p>Já a <strong>loja aberta para o público</strong> é o modo de produção: lá não dá para ficar testando peça por peça na frente do cliente. Primeiro a Ana monta tudo com perfeição (<code>npm run build</code> — o Next.js gera uma versão otimizada e minificada de tudo na pasta <code>.next/</code>), e só depois abre a loja (<code>npm start</code>, que serve essa versão otimizada). No modo dev a página é mais lenta e cheia de avisos de debug; no modo produção ela voa. Regra de bolso: <strong>desenvolva com <code>dev</code>, publique com <code>build</code> + <code>start</code></strong>.</p>
 <p>E o endereço <code>http://localhost:3000</code>? <code>localhost</code> é um apelido que o computador dá para <em>ele mesmo</em> — é como bater na própria porta de casa: "tem alguém em casa?" (neste caso, o servidor rodando no seu próprio computador). O número <code>3000</code> é a <strong>porta</strong>, tipo o número do apartamento: o servidor do Next.js escolhe a 3000 por padrão, mas se ela já estiver ocupada ele tenta a 3001, 3002… e avisa no terminal.</p>
+<h2>Ana faz o test-drive antes de abrir a loja</h2>
+<p>Antes de inaugurar, a Ana liga o carro na concessionária e faz o <strong>test-drive no estacionamento</strong>: testa o freio, o vidro, o som — tudo rapidinho, sem placa, sem seguro. O <code>npm run dev</code> (<code>next dev</code>) é esse test-drive do site: um servidor local em <code>localhost:3000</code> que recarrega a página a cada vez que a Ana salva o arquivo (hot reload), mostrando na hora se o freio (o botão) funcionou.</p>
+<p>Quando tudo passa no test-drive, aí sim a Ana roda o <code>npm run build</code> (a revisão completa) e o <code>npm start</code> (abrir a loja de verdade, no modo produção). Dev é a bancada de teste; produção é a loja aberta — e os comandos são só apelidos no <code>package.json</code> para <code>next dev</code>, <code>next build</code> e <code>next start</code>.</p>
 <h2>Os comandos</h2>
 <pre class="file" data-file="terminal">ana@notebook:~/meu-app$ npm run dev
 
@@ -19,7 +22,7 @@
   ➜ Local:   http://localhost:3000
   ➜ Network: http://192.168.0.10:3000</pre>
 <p>Deixe esse terminal <strong>aberto</strong> (não aperte Ctrl+C!) e abra outra aba do navegador em <code>http://localhost:3000</code>. Agora edite o <code>app/page.jsx</code>, salve, e volte no navegador: a mudança já está no ar. Para parar o servidor, volte no terminal e aperte <kbd>Ctrl</kbd>+<kbd>C</kbd>.</p>
-<figure class="tela"><img src="assets/telas/rodando.png" alt="Terminal com npm run dev mostrando Ready in 412ms e Local: http://localhost:3000, ao lado de um navegador com a página" width="1280" height="800" loading="lazy"><figcaption>O ritual do dia a dia: terminal aberto com <code>npm run dev</code> de um lado, navegador em <code>localhost:3000</code> do outro.</figcaption></figure>
+<figure class="tela"><img src="assets/telas/rodando-1.png" alt="Terminal com npm run dev mostrando Ready in 412ms e Local: http://localhost:3000, ao lado de um navegador com a página" width="1280" height="800" loading="lazy"><figcaption>O ritual do dia a dia: terminal aberto com <code>npm run dev</code> de um lado, navegador em <code>localhost:3000</code> do outro.</figcaption></figure>
 <div class="table-wrap"><table class="ref"><tr><th>Comando</th><th>O que faz</th><th>Quando usar</th></tr><tr><td><code>npm run dev</code></td><td>Liga o servidor de desenvolvimento com hot reload (Turbopack)</td><td><strong>Todo dia, enquanto programa</strong></td></tr><tr><td><code>npm run build</code></td><td>Gera a versão otimizada de produção em <code>.next/</code></td><td>Antes de publicar; também testa se o build quebra</td></tr><tr><td><code>npm start</code></td><td>Serve a versão de produção gerada pelo build</td><td>Depois do build, para testar produção localmente</td></tr><tr><td><code>npm run lint</code></td><td>Roda o ESLint (o revisor de código)</td><td>De vez em quando, para achar erro cedo</td></tr><tr><td><code>Ctrl+C</code></td><td>Para o servidor no terminal</td><td>Quando quiser desligar o dev</td></tr><tr><td><code>npm run dev -- -p 3001</code></td><td>Muda a porta (ex.: 3001)</td><td>Quando a 3000 está ocupada</td></tr></table></div>
 <p>De onde vem o <code>npm run dev</code>? Do <code>package.json</code>: lá dentro existe a seção <code>"scripts"</code> que apelida comandos longos. O <code>"dev": "next dev"</code> é exatamente isso — um apelido para o comando <code>next dev</code>.</p>
 <pre class="file" data-file="package.json">{
@@ -31,6 +34,29 @@
     "lint": "next lint"
   }
 }</pre>
+<div class="tryreact" data-goal="useState\(3001\)">
+<p class="try-task"><strong>Missão:</strong> a porta 3000 está ocupada no computador da Ana. Mude <code>React.useState(3000)</code> para <code>React.useState(3001)</code> — é o mesmo que rodar <code>next dev -p 3001</code>. Rode ▶ e ✔.</p>
+<pre class="script" data-file="App.jsx">function App() {
+  const [porta] = React.useState(3000);
+  return (
+    &lt;div style={{ background: "#111", color: "#0f0", fontFamily: "monospace", padding: 16, lineHeight: 1.7 }}&gt;
+      &lt;div&gt;▲ Next.js 15.0 (Turbopack)&lt;/div&gt;
+      &lt;div&gt;✓ Ready in 1.4s&lt;/div&gt;
+      &lt;div&gt;➜ Local: http://localhost:{porta}&lt;/div&gt;
+    &lt;/div&gt;
+  );
+}</pre>
+<pre class="solucao" data-file="App.jsx">function App() {
+  const [porta] = React.useState(3001);
+  return (
+    &lt;div style={{ background: "#111", color: "#0f0", fontFamily: "monospace", padding: 16, lineHeight: 1.7 }}&gt;
+      &lt;div&gt;▲ Next.js 15.0 (Turbopack)&lt;/div&gt;
+      &lt;div&gt;✓ Ready in 1.4s&lt;/div&gt;
+      &lt;div&gt;➜ Local: http://localhost:{porta}&lt;/div&gt;
+    &lt;/div&gt;
+  );
+}</pre>
+</div>
 <h2>Quando dá errado</h2>
 <div class="warning"><strong>Erro:</strong> a porta 3000 já está ocupada (a Ana esqueceu um terminal aberto) — o Next.js avisa e tenta a próxima:</div>
 <pre class="out">⚠ Port 3000 is in use, trying 3001 instead.

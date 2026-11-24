@@ -14,7 +14,7 @@
 <main class="main">
 <div class="content">
 <div class="pager"></div>
-<h1>SSR, SSG e ISR: quando o HTML nasce</h1>
+<h1><span class="hl">SSR, SSG e ISR</span>: quando o HTML nasce</h1>
 <p class="intro">Até aqui a Ana achava que "página" era um arquivo HTML pronto na pasta. No Next.js a página pode <strong>nascer na hora do pedido</strong>, <strong>nascer uma vez no build</strong> ou <strong>nascer estática e se renovar sozinha</strong> — três ritmos diferentes para a mesma tela. Nesta aula você aprende a escolher o ritmo certo para cada página do app dela.</p>
 <div class="note"><strong>Você vai aprender</strong><ul>
 <li>SSR (dinâmica): o servidor monta o HTML <strong>a cada pedido</strong> — <code>export const dynamic = 'force-dynamic'</code> e <code>fetch(..., { cache: 'no-store' })</code></li>
@@ -129,7 +129,7 @@ function App() {
     &lt;/div&gt;
   );
 }</pre></div>
-<figure class="tela"><img src="assets/telas/n3-ssr-ssg-isr.png" alt="Comparação entre SSR, SSG e ISR no navegador" width="1280" height="800" loading="lazy"><figcaption>Os três ritmos da mesma página: dinâmica (SSR), estática (SSG) e estática renovada (ISR).</figcaption></figure>
+<figure class="tela"><img src="assets/telas/ssr-ssg-isr-1.png" alt="Comparação entre SSR, SSG e ISR no navegador" width="1280" height="800" loading="lazy"><figcaption>Os três ritmos da mesma página: dinâmica (SSR), estática (SSG) e estática renovada (ISR).</figcaption></figure>
 <h2>Quando dá errado</h2>
 <div class="warning"><strong>Erro clássico de build:</strong> a Ana colocou <code>fetch(..., { cache: 'no-store' })</code> numa rota que também usa <code>generateStaticParams()</code>. Na hora do <code>next build</code>, o Next.js reclama porque não dá para gerar no build uma página que busca dado novo a cada hora:</div>
 <pre class="out">Error: Route "/blog/[slug]" used `cache: 'no-store'` inside a route that uses

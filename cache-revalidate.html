@@ -4,13 +4,16 @@
 <script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 </head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
 <div class="pager"></div>
-<h1>Cache e revalidação</h1>
+<h1><span class="hl">Cache</span> e revalidação</h1>
 <p class="intro">A Ana 👩‍💻 tinha um blog cacheado por 60 segundos. Ela publicava um post novo, clicava no blog… e continuava vendo a versão antiga. O problema: o cache estava <em>velho demais</em> sem ninguém avisar. Nesta página você aprende a <strong>invalidar o cache na hora certa</strong>: <code>revalidatePath</code> para rotas inteiras, <code>revalidateTag</code> para as etiquetas do fetch, e <code>unstable_cache</code> para cachear funções suas que não usam fetch.</p>
 <div class="note"><strong>Você vai aprender</strong><ul><li><code>revalidatePath("/blog")</code> dentro de uma Server Action, depois de salvar</li><li><code>revalidateTag("posts")</code> e a etiqueta <code>next: { tags: […] }</code> do fetch</li><li><code>unstable_cache</code> para embrulhar funções (ex: consulta ao banco)</li><li>Onde essas funções podem ser chamadas (só no servidor)</li></ul></div>
 <hr><h2>A ideia: a vitrine da loja e o botão "atualizar agora"</h2>
 <p>Uma loja coloca os produtos numa vitrine de vidro: enquanto ninguém mexe, a vitrine mostra o que foi montado (isso é o cache). Quando chega produto novo, o funcionário não precisa trocar a loja inteira — ele só <strong>tira a etiqueta do produto da vitrine</strong> e a próxima pessoa que olhar já vê o preço novo. Esse "tirar a etiqueta" é o <code>revalidateTag("posts")</code>: você batiza um conjunto de caches com uma etiqueta e, quando chama a função com essa etiqueta, todos eles são descartados de uma vez.</p>
 <p>Se a mudança é maior — mudou o layout da seção inteira, o menu, a home — aí o funcionário troca a <strong>vitrine inteira</strong>: é o <code>revalidatePath("/blog")</code>, que limpa o cache de uma rota específica (e, com <code>"/blog", "layout"</code>, todas as páginas abaixo dela).</p>
 <p>E quando a fonte de dados não é um <code>fetch</code> — é uma consulta direta no banco, uma leitura de arquivo? Aí não existe fetch para pendurar etiqueta, então você embrulha a sua função com <code>unstable_cache</code>, que faz o mesmo serviço: guarda o resultado, dá uma chave e aceita etiquetas e tempo de revalidação.</p>
+<h2>Ana e o cardápio da padaria: quando vale a pena reimprimir</h2>
+<p>A padaria da esquina da Ana imprime o cardápio todo dia de manhã cedo. Não porque o preço muda toda hora, mas porque <strong>às vezes muda</strong> — e ela não quer explicar preço errado na frente do cliente. O <strong>cache</strong> do Next.js funciona igual: a página fica guardada, pronta, servida em milissegundos — até alguém dizer "mudou!".</p>
+<p>Esse "mudou!" é a <strong>revalidação</strong>: com <code>revalidate</code> (modo ISR) a página é reimpressa sozinha depois de N segundos; com <code>revalidatePath</code>/<code>revalidateTag</code> a própria aplicação avisa na hora da escrita (depois de um POST, por exemplo). A Ana escolhe a estratégia como escolhe o cardápio: preço que muda pouco → imprime de tempos em tempos; preço que muda na hora → reimprime no ato.</p>
 <h2>Invalidando depois de uma escrita (Server Action)</h2>
 <p>O fluxo completo: o usuário envia um formulário → a Server Action salva no banco → <strong>antes de responder, a action invalida o cache</strong> → a próxima visita já vê o dado novo:</p>
 <pre class="file" data-file="app/actions.js">"use server";
@@ -99,7 +102,7 @@ export const getPosts = unstable_cache(
     &lt;/div&gt;
   );
 }</pre></div>
-<figure class="tela"><img src="assets/telas/cache-revalidate.png" alt="Server Action chamando revalidateTag e revalidatePath depois de salvar no banco" width="1280" height="800" loading="lazy"><figcaption>Depois de salvar, a Server Action chama <code>revalidateTag("posts")</code> e <code>revalidatePath("/blog")</code> — a próxima visita já vê o dado novo.</figcaption></figure>
+<figure class="tela"><img src="assets/telas/cache-revalidate-1.png" alt="Server Action chamando revalidateTag e revalidatePath depois de salvar no banco" width="1280" height="800" loading="lazy"><figcaption>Depois de salvar, a Server Action chama <code>revalidateTag("posts")</code> e <code>revalidatePath("/blog")</code> — a próxima visita já vê o dado novo.</figcaption></figure>
 <h2>Quando dá errado</h2>
 <div class="warning"><strong>Erro:</strong> chamar <code>revalidatePath</code>/<code>revalidateTag</code> fora do servidor (num Client Component) — a importação até existe, mas a chamada falha:</div>
 <pre class="out">Error: Route "/" used revalidatePath. revalidatePath can only be called in a Server Action or Route Handler — not in a Client Component.</pre>

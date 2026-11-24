@@ -4,14 +4,17 @@
 <script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 </head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
 <div class="pager"></div>
-<h1>Estrutura de pastas</h1>
+<h1><span class="hl">Estrutura de pastas</span></h1>
 <p class="intro">A Ana abriu o projeto no VS Code e viu um monte de pastas: <code>app</code>, <code>public</code>, <code>node_modules</code>, um monte de arquivos com ponto na frente… "Qual deles eu mexo?" Nesta página você vai saber exatamente o que cada coisa faz e — o mais importante — <em>onde</em> escrever o código dela.</p>
 <div class="note"><strong>Você vai aprender</strong><ul><li>O que faz cada pasta: <code>app/</code>, <code>public/</code>, <code>node_modules/</code>, <code>.next/</code></li><li>O que tem nos arquivos de configuração: <code>package.json</code>, <code>next.config.mjs</code>, <code>.gitignore</code></li><li>Regra de ouro: onde colocar páginas, componentes, imagens e CSS</li><li>O que nunca deve ir para o git</li></ul></div>
 <hr><h2>A ideia: a planta da casa antes de pendurar os quadros</h2>
 <p>Antes de construir uma casa, o arquiteto entrega a <strong>planta baixa</strong>: um desenho mostrando onde fica a cozinha, onde fica o quarto, onde passam os canos. Ninguém constrói no escuro. Um projeto Next.js novo também chega com a planta pronta: cada pasta tem um cômodo específico. A pasta <code>app/</code> é a área residencial — é lá que moram as suas páginas e componentes. A <code>public/</code> é a <em>vitrine da loja</em>: tudo que está lá dentro fica disponível publicamente numa URL direta (uma imagem em <code>public/foto.png</code> vira <code>/foto.png</code> no site). A <code>node_modules/</code> é o depósito das peças baixadas pelo npm — você não mexe there, só o npm mexe. E a <code>.next/</code> é o canteiro de obras: o servidor de desenvolvimento compila seu código lá dentro; ela é recriada sozinha, então nunca deve ser commitada.</p>
 <p>Os arquivos com ponto na frente (arquivos ocultos) são as "instalações da casa": <code>.gitignore</code> é a lista do que o git deve ignorar (justamente <code>node_modules/</code> e <code>.next/</code> — imagine commitar 300MB de dependências!), e <code>package.json</code> é a nota fiscal do projeto: lista os scripts (<code>dev</code>, <code>build</code>, <code>start</code>) e as dependências com suas versões. O <code>next.config.mjs</code> é o manual de ajustes finos do framework — no começo a Ana não precisa mexer nele.</p>
-<figure class="tela"><img src="assets/telas/estrutura-pastas.png" alt="Árvore de pastas de um projeto Next.js novo: app/, public/, node_modules/, package.json, next.config.mjs, .gitignore e .next/" width="1280" height="800" loading="lazy"><figcaption>A planta baixa do projeto: cada pasta tem um cômodo — só a <code>app/</code> e a <code>public/</code> são "sua" para editar.</figcaption></figure>
+<figure class="tela"><img src="assets/telas/estrutura-pastas-1.png" alt="Árvore de pastas de um projeto Next.js novo: app/, public/, node_modules/, package.json, next.config.mjs, .gitignore e .next/" width="1280" height="800" loading="lazy"><figcaption>A planta baixa do projeto: cada pasta tem um cômodo — só a <code>app/</code> e a <code>public/</code> são "sua" para editar.</figcaption></figure>
 <div class="table-wrap"><table class="ref"><tr><th>Arquivo/pasta</th><th>O que é</th><th>Quem edita</th></tr><tr><td><code>app/</code></td><td>As rotas e componentes do site. <code>app/page.jsx</code> = rota <code>/</code>, <code>app/sobre/page.jsx</code> = rota <code>/sobre</code></td><td><strong>Você</strong> ✏️</td></tr><tr><td><code>app/layout.jsx</code></td><td>Layout raiz: define <code>&lt;html&gt;</code> e <code>&lt;body&gt;</code> e envolve todas as páginas</td><td><strong>Você</strong> ✏️</td></tr><tr><td><code>app/page.jsx</code></td><td>A página inicial (rota <code>/</code>)</td><td><strong>Você</strong> ✏️</td></tr><tr><td><code>app/globals.css</code></td><td>CSS global importado pelo layout</td><td><strong>Você</strong> ✏️</td></tr><tr><td><code>public/</code></td><td>Arquivos públicos servidos direto: <code>public/logo.svg</code> vira <code>/logo.svg</code></td><td><strong>Você</strong> ✏️ ( joga imagens aqui )</td></tr><tr><td><code>node_modules/</code></td><td>Dependências instaladas pelo npm (react, next, etc.)</td><td> só o npm 🤖</td></tr><tr><td><code>.next/</code></td><td>Build/cache gerados pelo servidor de dev e pelo build</td><td> só o Next 🤖</td></tr><tr><td><code>package.json</code></td><td>Scripts (<code>dev</code>, <code>build</code>, <code>start</code>) e lista de dependências</td><td>npm + você (com cuidado)</td></tr><tr><td><code>next.config.mjs</code></td><td>Configurações avançadas do Next.js</td><td>Você, quando precisar</td></tr><tr><td><code>.gitignore</code></td><td>Lista do que o git ignora (<code>node_modules/</code>, <code>.next/</code>)</td><td>já vem pronto</td></tr></table></div>
+<h2>Ana etiquetando as caixas da mudança: cada coisa no seu lugar</h2>
+<p>Na mudança, a Ana não joga tudo numa caixa só — ela escreve <strong>"cozinha", "quarto", "banheiro"</strong> em cada caixa. Quando chega no apartamento novo, ela sabe exatamente onde achar cada coisa sem abrir tudo. Um projeto Next.js é a mudança bem feita: <code>app/</code> é a caixa das páginas, <code>components/</code> a dos componentes, <code>public/</code> a das imagens soltas, e <code>node_modules/</code> a caixa que chega pronta e nem se abre.</p>
+<p>E dentro da caixa <code>app/</code> mora a regra mais importante do guia: <strong>pasta com <code>page.jsx</code> vira rota</strong>. A Ana pode conferir a árvore inteira com o comando <code>tree</code> no terminal — como olhar as etiquetas das caixas antes de começar a desempacotar.</p>
 <h2>O comando que a Ana sempre usa para ver a árvore</h2>
 <pre class="file" data-file="terminal">ana@notebook:~/meu-app$ tree -L 2 -I node_modules
 .
@@ -24,6 +27,35 @@
 ├── next.config.mjs
 ├── package.json
 └── .gitignore</pre>
+<div class="tryreact" data-goal="blog/">
+<p class="try-task"><strong>Missão:</strong> a Ana criou a pasta <code>app/blog/</code> com um <code>page.jsx</code> dentro. Adicione essas duas linhas na árvore renderizada abaixo (repare no recuo de 4 espaços). Rode ▶ e ✔.</p>
+<pre class="script" data-file="App.jsx">function App() {
+  return (
+    &lt;div style={{ fontFamily: "monospace", padding: 20, lineHeight: 1.7 }}&gt;
+      &lt;div&gt;meu-app/&lt;/div&gt;
+      &lt;div&gt;&amp;nbsp;&amp;nbsp;app/&lt;/div&gt;
+      &lt;div&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;layout.jsx&lt;/div&gt;
+      &lt;div&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;page.jsx&lt;/div&gt;
+      &lt;div&gt;&amp;nbsp;&amp;nbsp;public/&lt;/div&gt;
+      &lt;div&gt;&amp;nbsp;&amp;nbsp;package.json&lt;/div&gt;
+    &lt;/div&gt;
+  );
+}</pre>
+<pre class="solucao" data-file="App.jsx">function App() {
+  return (
+    &lt;div style={{ fontFamily: "monospace", padding: 20, lineHeight: 1.7 }}&gt;
+      &lt;div&gt;meu-app/&lt;/div&gt;
+      &lt;div&gt;&amp;nbsp;&amp;nbsp;app/&lt;/div&gt;
+      &lt;div&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;layout.jsx&lt;/div&gt;
+      &lt;div&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;page.jsx&lt;/div&gt;
+      &lt;div&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;blog/&lt;/div&gt;
+      &lt;div&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;page.jsx&lt;/div&gt;
+      &lt;div&gt;&amp;nbsp;&amp;nbsp;public/&lt;/div&gt;
+      &lt;div&gt;&amp;nbsp;&amp;nbsp;package.json&lt;/div&gt;
+    &lt;/div&gt;
+  );
+}</pre>
+</div>
 <h2>Quando dá errado</h2>
 <div class="warning"><strong>Erro:</strong> a Ana criou a página dela como <code>meu-app/pagina.jsx</code> (na raiz, fora de <code>app/</code>) e o navegador mostra 404:</div>
 <pre class="out">404 — This page could not be found.

@@ -4,13 +4,16 @@
 <script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 </head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
 <div class="pager"></div>
-<h1>Server Actions: <code>"use server"</code></h1>
+<h1><span class="hl">Server Actions</span>: <code>"use server"</code></h1>
 <p class="intro">A Ana 👩‍💻 tinha um botão de "curtir" que exigia JavaScript: <code>onClick</code> chamando <code>fetch</code> na mão, tratar loading, tratar erro… Ela trocou tudo por um <strong>formulário apontando para uma função do servidor</strong>. Zero JS no cliente: o próprio <code>&lt;form action={curtir}&gt;</code> envia os dados para a action, que roda no servidor. Isso é Server Action.</p>
 <div class="note"><strong>Você vai aprender</strong><ul><li>A diretiva <code>"use server"</code> no topo de um arquivo de actions</li><li><code>&lt;form action={minhaAction}&gt;</code> — form nativo mandando para o servidor</li><li>Ler os campos com <code>formData.get("nome")</code></li><li><code>useActionState</code> para receber estado de volta (erros, sucesso)</li><li><code>useFormStatus</code> para o botão "Enviando…" (pending)</li></ul></div>
 <hr><h2>A ideia: o garçom que anota o pedido na cozinha, não no celular do cliente</h2>
 <p>Num site antigo, o cliente (navegador) telefonava para a cozinha (API) ele mesmo, anotava o pedido e atualizava a tela — muito JavaScript, muita chance de erro. Com Server Action, o <strong>garçom entrega o pedido direto na cozinha</strong>: o formulário HTML nativo faz um POST para uma função que você escreveu no servidor, e a resposta volta como uma nova renderização da página. O navegador nem precisa de JavaScript para isso funcionar.</p>
 <p>Os dados do formulário chegam numa estrutura chamada <code>FormData</code> — um "formulário preenchido" que você lê campo a campo com <code>formData.get("nome")</code>, exatamente igual aos campos <code>name="…"</code> dos inputs. E como a action roda no servidor, ela pode tocar no banco de dados, ler cookies, chamar <code>revalidatePath</code> e até dar <code>redirect</code> — tudo sem mandar código nenhum para o cliente.</p>
 <p>Há duas formas de declarar: <strong>arquivo inteiro de actions</strong> (primeira linha <code>"use server"</code>, cada função exportada vira uma action) ou <strong>inline dentro de um Server Component</strong> (a diretiva dentro da função). A primeira é a mais organizada; a segunda serve para actions descartáveis.</p>
+<h2>Ana e o garçom que anota o pedido na comanda e leva para a cozinha</h2>
+<p>No restaurante da Ana, o garçom anota o pedido numa comanda e leva para a cozinha — a Ana não entra na cozinha gritando o pedido. Uma <strong>Server Action</strong> é essa comanda: a página (o salão) chama uma função marcada com <code>"use server"</code>, e o servidor (a cozinha) executa essa função com os dados do formulário, grava no banco e devolve o resultado. O navegador nem precisa saber cozinhar.</p>
+<p>A mágica está na palavra <code>"use server"</code>: ela pode estar no topo de um arquivo inteiro de actions ou dentro da própria função chamada pelo formulário (<code>&lt;form action={minhaAction}&gt;</code>). Com <code>useActionState</code> dá até para guardar o estado do envio (erros de validação, mensagem de sucesso) e mostrar na tela sem reload — a comanda volta com a resposta anotada.</p>
 <h2>Arquivo de actions + formulário que aponta para ela</h2>
 <pre class="file" data-file="app/actions.js">"use server"; // primeira linha: tudo aqui roda no servidor
 
@@ -86,7 +89,7 @@ export async function enviarMensagem(estadoAnterior, formData) {
 <tr><td><code>useActionState(fn, inicial)</code></td><td>Client Component</td><td>chama a action e guarda o estado retornado → <code>[state, formAction, pending]</code></td></tr>
 <tr><td><code>useFormStatus()</code></td><td>Client Component filho do form</td><td>dá acesso a <code>{ pending }</code> do form pai</td></tr>
 </table>
-<div class="tryreact" data-goal="useActionState|formAction"><p class="try-task"><strong>Missão:</strong> simulando o <code>useActionState</code>: o componente deve guardar o <code>estado</code> devolvido pela "action" e mostrar "Enviado ✔" quando <code>estado.ok</code> for verdadeiro. Complete com <code>useState</code> + função que simula a action, e o botão que chama <code>enviar</code> (dica: o botão usa <code>formAction</code>-style: passe a função direto no onClick).</p><pre class="script" data-file="App.jsx">function App() {
+<div class="tryreact" data-goal="enviar\(\);"><p class="try-task"><strong>Missão:</strong> simulando o <code>useActionState</code>: o componente deve guardar o <code>estado</code> devolvido pela "action" e mostrar "Enviado ✔" quando <code>estado.ok</code> for verdadeiro. Complete com <code>useState</code> + função que simula a action, e o botão que chama <code>enviar</code> (dica: o botão usa <code>formAction</code>-style: passe a função direto no onClick).</p><pre class="script" data-file="App.jsx">function App() {
   // simula: const [state, formAction] = useActionState(enviar, { ok: false })
   const [state, setState] = React.useState({ ok: false });
 
@@ -120,7 +123,7 @@ export async function enviarMensagem(estadoAnterior, formData) {
     &lt;/div&gt;
   );
 }</pre></div>
-<figure class="tela"><img src="assets/telas/server-actions.png" alt="Formulário com action={curtir} apontando para a Server Action, sem JavaScript no cliente" width="1280" height="800" loading="lazy"><figcaption>O <code>&lt;form action={curtirPost}&gt;</code> faz o POST para o servidor sozinho — o navegador não precisa de JS para enviar.</figcaption></figure>
+<figure class="tela"><img src="assets/telas/server-actions-1.png" alt="Formulário com action={curtir} apontando para a Server Action, sem JavaScript no cliente" width="1280" height="800" loading="lazy"><figcaption>O <code>&lt;form action={curtirPost}&gt;</code> faz o POST para o servidor sozinho — o navegador não precisa de JS para enviar.</figcaption></figure>
 <h2>Quando dá errado</h2>
 <div class="warning"><strong>Erro:</strong> passar uma função normal de Client Component como <code>action</code> — o Next.js só aceita Server Action:</div>
 <pre class="out">Error: Functions cannot be passed directly to Client Components…

@@ -4,13 +4,16 @@
 <script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 </head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
 <div class="pager"></div>
-<h1>Estados especiais: <code>loading</code>, <code>error</code>, <code>404</code></h1>
+<h1><span class="hl">Estados especiais</span>: <code>loading</code>, <code>error</code>, <code>404</code></h1>
 <p class="intro">A Ana 👩‍💻 tinha uma página de post que buscava dados no banco e demorava 2 segundos. Nesses 2 segundos a tela travava em branco — dava a impressão de que o site tinha quebrado. Ela scopriu que o App Router tem <strong>três arquivos mágicos</strong> para esses momentos: <code>loading.jsx</code> (enquanto espera), <code>error.jsx</code> (quando quebra) e <code>not-found.jsx</code> (quando a rota não existe).</p>
 <div class="note"><strong>Você vai aprender</strong><ul><li><code>loading.jsx</code>: o Suspense automático em volta da página</li><li><code>error.jsx</code>: precisa de <code>"use client"</code> e recebe <code>reset</code></li><li><code>not-found.jsx</code> + <code>notFound()</code> para o 404</li><li>Hierarquia: o arquivo mais próximo da rota é o que vale</li></ul></div>
 <hr><h2>A ideia: o balcão de atendimento com senha, placa de reforma e placa de 404</h2>
 <p>Um banco tem três placas diferentes. Quando você entra e a senha ainda não chamou, aparece a placa <strong>"aguarde"</strong> — é o <code>loading.jsx</code>: enquanto o Server Component busca dados, o Next.js envolve a página num <code>Suspense</code> e mostra esse arquivo na hora, sem bloquear o resto do layout.</p>
 <p>Se o cofre está trancado e o sistema cai, o atendente coloca a placa <strong>"deu problema, clique para tentar de novo"</strong> — é o <code>error.jsx</code>: qualquer erro lançado dentro da página (fetch quebrado, divisão por zero, <code>throw</code> seu) cai nesse arquivo, que recebe o erro e uma função <code>reset()</code> para tentar renderizar de novo. Ele precisa ser Client Component (<code>"use client"</code>) porque usa o botão.</p>
 <p>E se você procura uma agência que não existe? A placa <strong>"404 — não encontrado"</strong> — é o <code>not-found.jsx</code>, disparado quando a rota não casa com nada ou quando você chama <code>notFound()</code> no código (lembra da página de rotas dinâmicas?).</p>
+<h2>Ana e a senha da fila do banco: 'aguarde, já já atendemos'</h2>
+<p>No banco, às vezes a Ana pega uma senha e vê na tela <strong>"aguarde um instante…"</strong>. Ela não sai da fila achando que deu errado — ela sabe que o atendente está chegando. O arquivo <code>loading.jsx</code> é essa telinha de "aguarde": enquanto a página demora (buscando dados, por exemplo), o Next mostra o loading no lugar dela. O <code>error.jsx</code> é o aviso de "não conseguimos atender agora, tente de novo" — com um botão de tentar outra vez (<code>reset</code>). E o <code>not-found.jsx</code> é a placa de "guichê inexistente" — o 404.</p>
+<p>A grande vantagem para a Ana: esses três arquivos vivem <strong>na mesma pasta da rota</strong>, como três guichês do mesmo corredor. Ela não precisa escrever <code>if (carregando) ... else if (erro) ...</code> dentro da página — o próprio Next escolhe qual guichê mostrar, e a experiência fica uniforme no site inteiro.</p>
 <h2>Os três arquivos na prática</h2>
 <pre class="file" data-file="app/blog/[id]/loading.jsx">export default function Loading() {
   return &lt;p&gt;Carregando post… ⏳&lt;/p&gt;;
@@ -88,7 +91,7 @@ export default function NotFound() {
     &lt;/div&gt;
   );
 }</pre></div>
-<figure class="tela"><img src="assets/telas/estados-especiais.png" alt="Os três arquivos loading.jsx, error.jsx e not-found.jsx e quando cada um aparece" width="1280" height="800" loading="lazy"><figcaption>Enquanto busca → <code>loading.jsx</code>; se quebrar → <code>error.jsx</code> com botão <code>reset()</code>; se não existir → <code>not-found.jsx</code>.</figcaption></figure>
+<figure class="tela"><img src="assets/telas/estados-especiais-1.png" alt="Os três arquivos loading.jsx, error.jsx e not-found.jsx e quando cada um aparece" width="1280" height="800" loading="lazy"><figcaption>Enquanto busca → <code>loading.jsx</code>; se quebrar → <code>error.jsx</code> com botão <code>reset()</code>; se não existir → <code>not-found.jsx</code>.</figcaption></figure>
 <h2>Quando dá errado</h2>
 <div class="warning"><strong>Erro:</strong> esquecer o <code>"use client"</code> no <code>error.jsx</code>. Como o arquivo usa <code>onClick</code>, o build acusa na hora:</div>
 <pre class="out">Error: Event handlers cannot be passed to Client Component props.

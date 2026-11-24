@@ -4,13 +4,16 @@
 <script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 </head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
 <div class="pager"></div>
-<h1>Middleware: <code>middleware.ts</code></h1>
+<h1><span class="hl">Middleware</span>: <code>middleware.ts</code></h1>
 <p class="intro">A Ana 👩‍💻 queria que a área <code>/painel</code> só abrisse para quem fez login — e queria barrar isso <strong>antes mesmo de a página carregar</strong>, rápido, na borda. A solução foi o <code>middleware.ts</code> na raiz do projeto: um código que roda em <em>cada requisição que combinar com o matcher</em>, antes de qualquer página, e pode redirecionar, reescrever, medir ou bloquear.</p>
 <div class="note"><strong>Você vai aprender</strong><ul><li>Criar <code>middleware.ts</code> na raiz (mesmo nível de <code>app/</code>)</li><li><code>export function middleware(request: NextRequest)</code></li><li>Os 4 retornos: <code>NextResponse.next()</code>, <code>redirect</code>, <code>rewrite</code>, resposta direta</li><li><code>export const config = { matcher: […] }</code> para limitar onde roda</li><li>Ler cookies do pedido e setar headers na resposta</li></ul></div>
 <hr><h2>A ideia: o segurança na porta do evento</h2>
 <p>Um evento grande tem um segurança na porta: antes de deixar alguém entrar, ele confere o nome na lista (cookie de sessão), cola um crachá (header na resposta) e, se a pessoa não está na lista, manda para a fila do credenciamento (redirect). O <strong>middleware é esse segurança</strong>: ele roda na <em>edge</em> — um servidor pertinho do usuário, não no servidor principal — então a checagem é rápida e acontece <em>antes</em> da página ser renderizada.</p>
 <p>O arquivo mora na raiz do projeto (ou em <code>src/</code>, se usar) e se chama <code>middleware.ts</code>. Dentro dele você exporta uma função <code>middleware</code> que recebe o pedido (<code>NextRequest</code>) e devolve uma das quatro coisas: deixar passar (<code>NextResponse.next()</code>), redirecionar, reescrever a URL por baixo dos panos, ou responder direto (bloquear). O <code>config.matcher</code> diz em quais URLs o segurança trabalha — sem ele, ele trabalharia em <em>todas</em>, inclusive nos arquivos estáticos, e deixaria o site lento.</p>
 <p>Importante: o middleware <strong>não acessa o banco de dados</strong> — ele roda na edge, sem Node completo. Ele lê cookie, header, URL e decide na hora. Validação pesada de sessão fica na página/action; aqui fica só a checagem rápida do token.</p>
+<h2>Ana e o porteiro que confere a lista na porta — antes de você entrar no prédio</h2>
+<p>Em alguns prédios, o porteiro não deixa ninguém passar antes de conferir a lista na portaria. O <code>middleware.ts</code> é esse porteiro do Next.js: ele roda <strong>antes de cada página ser entregue</strong>, vê a URL e os cookies da requisição e pode decidir na hora — deixar passar, redirecionar para o login (<code>/painel</code> sem cookie → <code>/login</code>) ou reescrever a resposta.</p>
+<p>A grande sacada da Ana: o porteiro fica num lugar só (<code>middleware.ts</code> na raiz), e não espalhado em cada página fazendo <code>if (!logado) redirect()</code>. Uma regra para proteger rotas, outra para medir acessos, outra para trocar de idioma — tudo num arquivo que o Next garante que roda antes de tudo.</p>
 <h2>Protegendo /painel com cookie de sessão</h2>
 <pre class="file" data-file="middleware.ts (na raiz do projeto)">import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
@@ -115,7 +118,7 @@ return NextResponse.json({ erro: "bloqueado" }, { status: 401 });</pre>
     &lt;/div&gt;
   );
 }</pre></div>
-<figure class="tela"><img src="assets/telas/middleware.png" alt="middleware.ts interceptando /painel sem cookie e redirecionando para /login" width="1280" height="800" loading="lazy"><figcaption>O matcher limita o middleware a <code>/painel/:path*</code> e <code>/api/:path*</code>; sem cookie de sessão, o pedido vira um redirect 307 para <code>/login</code>.</figcaption></figure>
+<figure class="tela"><img src="assets/telas/middleware-1.png" alt="middleware.ts interceptando /painel sem cookie e redirecionando para /login" width="1280" height="800" loading="lazy"><figcaption>O matcher limita o middleware a <code>/painel/:path*</code> e <code>/api/:path*</code>; sem cookie de sessão, o pedido vira um redirect 307 para <code>/login</code>.</figcaption></figure>
 <h2>Quando dá errado</h2>
 <div class="warning"><strong>Erro:</strong> esquecer o <code>matcher</code> e deixar o middleware rodar em <em>tudo</em> — including arquivos estáticos — o que deixa o site absurdamente lento, ou pior, quebra o login num loop:</div>
 <pre class="out">⚠ Middleware is invoked on every route, isto é, em todas as rotas, inclusive _next/static/…

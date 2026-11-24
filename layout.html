@@ -4,13 +4,16 @@
 <script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 </head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
 <div class="pager"></div>
-<h1>Layout raiz (app/layout.jsx)</h1>
+<h1><span class="hl">Layout</span> raiz (app/layout.jsx)</h1>
 <p class="intro">Toda página da Ana precisa de <code>&lt;html&gt;</code> e <code>&lt;body&gt;</code> — e repetir isso em cada arquivo seria um pesadelo. O <code>app/layout.jsx</code> resolve isso: é o <strong>único arquivo obrigatório</strong> da pasta <code>app/</code>, e ele envolve todas as páginas do site. Nesta página você vai editar o layout, definir o título da aba e importar o CSS global.</p>
 <div class="note"><strong>Você vai aprender</strong><ul><li>Por que o <code>app/layout.jsx</code> é obrigatório e único na raiz de <code>app/</code></li><li>Como ele define <code>&lt;html&gt;</code>, <code>&lt;body&gt;</code> e recebe <code>{children}</code></li><li>Como exportar <code>metadata</code> (title, description) — o título da aba do navegador</li><li>Onde importar o CSS global (<code>globals.css</code>)</li><li>Que o layout persiste entre navegações (não recarrega)</li></ul></div>
 <hr><h2>A ideia: o layout é a moldura e a fundação da casa</h2>
 <p>Imagine que a Ana vai pendurar quadros numa parede. Cada quadro (cada <em>página</em>) é diferente — um é uma foto da praia, outro é um pôster de banda — mas a <strong>parede, o rodapé, a tomada e a moldura externa são sempre as mesmas</strong>. Ninguém constrói uma parede nova para cada quadro. O <code>layout.jsx</code> é exatamente essa parede: ele diz "todo quadro deste site fica dentro de um <code>&lt;html&gt;</code> com <code>&lt;body&gt;</code> assim", e o lugar onde o quadro entra chama-se <code>{children}</code> — literalmente "os filhos": o Next.js encaixa a página atual bem naquele buraco.</p>
 <p>Isso tem uma consequência poderosa: quando o usuário navega de <code>/</code> para <code>/sobre</code>, <strong>o layout não é recarregado</strong> — só o <code>children</code> troca. É por isso que menus e barras superiores não piscam na navegação. Se cada página tivesse o próprio <code>&lt;html&gt;</code>, a página inteira recarregaria a cada clique (o comportamento antigo de sites em PHP, por exemplo).</p>
 <p>Além da estrutura, o layout também cuida da <strong>metadata</strong>: o título que aparece na aba do navegador, a descrição para o Google, o ícone. No App Router isso é declarativo: basta exportar um objeto <code>metadata</code> no mesmo arquivo — sem biblioteca externa. E é no layout que importamos o CSS global (<code>globals.css</code>), porque CSS global só pode ser importado no layout raiz (você vai ver o erro disso no capítulo de estilos).</p>
+<h2>Ana constrói a casa com as paredes mestras primeiro</h2>
+<p>Antes de decorar qualquer cômodo, a Ana levanta as <strong>paredes mestras</strong> da casa — e todos os cômodos usam essas paredes. O <code>app/layout.jsx</code> é a parede mestra do site: ele define o <code>&lt;html&gt;</code>, o <code>&lt;body&gt;</code>, o menu e o rodapé uma única vez, e todas as páginas entram no meio pelo <code>{children}</code> — como um cômodo que já nasce dentro da casa, herdando a estrutura.</p>
+<p>E dá para ter paredes mestras internas: um <code>layout.jsx</code> dentro de <code>app/blog/</code> envolve só as páginas do blog com a sidebar do blog. A regra da Ana: o que é igual em tudo vai no layout raiz; o que é específico de uma área vai no layout da pasta — assim nenhuma página repete código de menu e rodapé.</p>
 <h2>O layout padrão do create-next-app, simplificado</h2>
 <pre class="file" data-file="app/layout.jsx">import "./globals.css"; // CSS global do site inteiro
 
@@ -29,7 +32,7 @@ export default function RootLayout({ children }) {
   );
 }</pre>
 <p>Repare nos três blocos: (1) o <code>import</code> do CSS global no topo; (2) o <code>export const metadata</code> — troque o <code>title</code> e olhe a aba do navegador mudar; (3) o componente padrão que recebe <code>{ children }</code> e o coloca dentro do <code>&lt;body&gt;</code>. <strong>Sem <code>&lt;html&gt;</code> e <code>&lt;body&gt;</code> aqui, o Next.js dá erro</strong> — é a fundação da casa.</p>
-<figure class="tela"><img src="assets/telas/layout.png" alt="Navegador mostrando uma página com o header preto do layout envolvendo o conteúdo da página" width="1280" height="800" loading="lazy"><figcaption>O header preto vem do <code>layout.jsx</code> e aparece em todas as páginas — é o {children} que troca no meio.</figcaption></figure>
+<figure class="tela"><img src="assets/telas/layout-1.png" alt="Navegador mostrando uma página com o header preto do layout envolvendo o conteúdo da página" width="1280" height="800" loading="lazy"><figcaption>O header preto vem do <code>layout.jsx</code> e aparece em todas as páginas — é o {children} que troca no meio.</figcaption></figure>
 <h2>Layouts aninhados</h2>
 <p>O App Router permite <strong>layouts aninhados</strong>: além do <code>app/layout.jsx</code> (raiz, obrigatório), a Ana pode criar <code>app/blog/layout.jsx</code>, que envolve só as páginas de <code>app/blog/...</code> — útil para uma seção inteira com sidebar própria. O layout mais próximo da página envolve por dentro. Mas no Nível 1 vamos ficar só no raiz.</p>
 <pre class="file" data-file="estrutura">app/
@@ -39,6 +42,45 @@ export default function RootLayout({ children }) {
     ├── layout.jsx    ← layout só do blog (opcional, aninhado)
     └── page.jsx      ← rota /blog</pre>
 <div class="table-wrap"><table class="ref"><tr><th>Parte do layout</th><th>O que faz</th></tr><tr><td><code>import "./globals.css"</code></td><td>Importa o CSS global (só pode aqui no raiz)</td></tr><tr><td><code>export const metadata</code></td><td>Título da aba, descrição, ícone… (SEO)</td></tr><tr><td><code>&lt;html lang="pt-BR"&gt;</code></td><td>Elemento raiz obrigatório; lang ajuda acessibilidade e SEO</td></tr><tr><td><code>&lt;body&gt;{children}&lt;/body&gt;</code></td><td>O {children} é onde a página atual entra</td></tr><tr><td><code>export default function RootLayout</code></td><td>Nome só por convenção; precisa ser export default</td></tr></table></div>
+<div class="tryreact" data-goal="Site da Ana">
+<p class="try-task"><strong>Missão:</strong> o <code>&lt;header&gt;</code> do Layout ainda diz “MeuSite”. Troque o texto dele para <code>Site da Ana</code> — repare que o <code>{children}</code> continua no lugar. Rode ▶ e ✔.</p>
+<pre class="script" data-file="App.jsx">function Layout({ children }) {
+  return (
+    &lt;div style={{ fontFamily: "sans-serif" }}&gt;
+      &lt;header style={{ background: "#222", color: "#fff", padding: 10 }}&gt;MeuSite&lt;/header&gt;
+      &lt;main style={{ padding: 20 }}&gt;{children}&lt;/main&gt;
+      &lt;footer style={{ color: "#888", fontSize: 12, padding: 10 }}&gt;rodapé compartilhado&lt;/footer&gt;
+    &lt;/div&gt;
+  );
+}
+
+function App() {
+  return (
+    &lt;Layout&gt;
+      &lt;h1&gt;Página inicial&lt;/h1&gt;
+      &lt;p&gt;Este texto é o children que o layout recebe.&lt;/p&gt;
+    &lt;/Layout&gt;
+  );
+}</pre>
+<pre class="solucao" data-file="App.jsx">function Layout({ children }) {
+  return (
+    &lt;div style={{ fontFamily: "sans-serif" }}&gt;
+      &lt;header style={{ background: "#222", color: "#fff", padding: 10 }}&gt;Site da Ana&lt;/header&gt;
+      &lt;main style={{ padding: 20 }}&gt;{children}&lt;/main&gt;
+      &lt;footer style={{ color: "#888", fontSize: 12, padding: 10 }}&gt;rodapé compartilhado&lt;/footer&gt;
+    &lt;/div&gt;
+  );
+}
+
+function App() {
+  return (
+    &lt;Layout&gt;
+      &lt;h1&gt;Página inicial&lt;/h1&gt;
+      &lt;p&gt;Este texto é o children que o layout recebe.&lt;/p&gt;
+    &lt;/Layout&gt;
+  );
+}</pre>
+</div>
 <h2>Quando dá errado</h2>
 <div class="warning"><strong>Erro 1:</strong> a Ana apagou o <code>&lt;html&gt;</code>/<code>&lt;body&gt;</code> do layout e o Next.js reclamou no build:</div>
 <pre class="out">Error: Missing "&lt;html&gt;" and "&lt;body&gt;" tags in the root layout.

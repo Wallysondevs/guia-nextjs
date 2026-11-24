@@ -14,7 +14,7 @@
 <main class="main">
 <div class="content">
 <div class="pager"></div>
-<h1>Domínio próprio: de meusite.vercel.app para meudominio.com.br</h1>
+<h1><span class="hl">Domínio próprio</span>: de meusite.vercel.app para meudominio.com.br</h1>
 <p class="intro">O endereço <code>meu-app.vercel.app</code> serve para testar, mas a loja da Ana precisava de <strong>endereço próprio</strong> no letreiro: <code>lojinha.com.br</code>. Nesta aula você aprende a apontar um domínio comprado (Registro.br, GoDaddy…) para o projeto na Vercel: adicionar o domínio no painel, configurar o DNS (A + CNAME), esperar a propagação e receber o <strong>SSL automático</strong> (cadeado verde).</p>
 <div class="note"><strong>Você vai aprender</strong><ul>
 <li>Comprar o domínio num registrador (Registro.br, Hostinger, GoDaddy, Cloudflare…)</li>
@@ -28,6 +28,9 @@
 <h2>A ideia: trocar a placa da loja</h2>
 <p>O <code>vercel.app</code> é como uma <strong>placa provisória</strong> que a prefeitura empresta: funciona, mas não é seu endereço. Comprar o domínio é registrar o endereço no cartório (o <em>registrador</em> — Registro.br para .br): lá você diz "esse nome é meu". Depois, você precisa <strong>apontar a placa para a loja certa</strong>: isso é o DNS, o "GPS da internet" — você configura no painel do registrador para onde o nome manda (no caso, para os servidores da Vercel).</p>
 <p> existem dois tipos de registro que interessam: o <strong>A</strong> (endereço numérico) para o domínio "raiz" (<code>lojinha.com.br</code>, também chamado <em>apex</em>) apontando para o IP da Vercel, e o <strong>CNAME</strong> (apelido) para o <code>www</code> (<code>www.lojinha.com.br</code>) apontando para <code>cname.vercel-dns.com</code>. Quando o DNS propaga, o pedido bate na Vercel, que reconhece o domínio, entrega o app e emite o <strong>certificado SSL</strong> sozinho (Let's Encrypt) — o cadeado verde aparece sem você mexer em nada.</p>
+<h2>Ana troca a placa da loja, mas o endereço continua o mesmo</h2>
+<p>Quando a loja da Ana cresceu, ela trocou a placa velha por uma nova e iluminada: <strong>meudominio.com.br</strong> no lugar de <code>meusite.vercel.app</code>. Repare que ela não mudou de endereço físico — a loja continua no mesmo ponto — só pendurou a placa nova e configurou o interfone para atender pelo nome novo. O domínio customizado é isso: um <strong>DNS</strong> apontando o nome bonito para o servidor da Vercel, sem mover nada de lugar.</p>
+<p>E tem o detalhe do cadeado: o <code>https</code> e o certificado SSL vêm de graça na Vercel, como o segurança novo que já chega uniformizado. A Ana só precisa ir no painel do domínio (onde ela registrou o nome, tipo Registro.br) e criar os registros DNS que a Vercel pede — geralmente um registro <code>A</code> para a raiz e um <code>CNAME</code> para <code>www</code>.</p>
 <h2>Passo a passo</h2>
 <pre class="file" data-file="1) comprar e registrar o domínio">Registro.br (para .com.br):
   1. crie conta → "Registrar domínio" → pesquise lojinha.com.br
@@ -84,7 +87,7 @@ function App() {
     &lt;/div&gt;
   );
 }</pre></div>
-<figure class="tela"><img src="assets/telas/n3-dominio.png" alt="Domínio próprio configurado com DNS e SSL na Vercel" width="1280" height="800" loading="lazy"><figcaption>Domínio adicionado na Vercel com configuração de DNS válida e certificado SSL automático.</figcaption></figure>
+<figure class="tela"><img src="assets/telas/dominio-custom-1.png" alt="Domínio próprio configurado com DNS e SSL na Vercel" width="1280" height="800" loading="lazy"><figcaption>Domínio adicionado na Vercel com configuração de DNS válida e certificado SSL automático.</figcaption></figure>
 <h2>Quando dá errado</h2>
 <div class="warning"><strong>Erro real:</strong> depois de configurar o DNS, a Vercel mostra <em>"Invalid Configuration"</em> e o navegador diz <code>DNS_PROBE_POSSIBLE</code> / "não foi possível acessar esse site". Quase sempre é propagação — o DNS ainda não chegou no seu provedor. Teste com <code>dig</code> e espere (até 48h, geralmente minutos):</div>
 <pre class="out">$ dig lojinha.com.br +short
