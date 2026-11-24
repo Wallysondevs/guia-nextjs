@@ -1,0 +1,49 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>O que é o Next.js | Guia Next.js</title><meta name="description" content="Entenda o que é o Next.js: o framework fullstack em cima do React que adiciona servidor, rotas por arquivo, renderização no servidor e otimizações automáticas. Do lançamento em 2016 até o Next.js 15.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
+<div class="pager"></div>
+<h1>O que é o Next.js</h1>
+<p class="intro">Ana instalou o React no computador e criou componentes lindos — mas toda página recarregava inteiro a cada clique, o Google não enxergava o conteúdo, e ela descobriu que React sozinho só cuida da <em>camada visual</em>. Nesta página você vai entender o que o Next.js adiciona por cima do React e por que ele virou o padrão para aplicações web em 2025.</p>
+<div class="note"><strong>Você vai aprender</strong><ul><li>O que é um framework <em>fullstack</em> e por que o Next.js é um</li><li>O que o Next.js adiciona ao React: servidor, rotas, SSR, otimizações</li><li>A história do Next.js: de 2016 até o Next.js 15</li><li>Quando faz sentido usar Next.js (e quando React puro basta)</li></ul></div>
+<hr><h2>A ideia: React é o motor, Next.js é o carro inteiro</h2>
+<p>Imagine que você compra um motor de carro de Fórmula 1. É uma peçaFantástica — Gira a 15 mil rotações por minuto e faz o carro voar. Mas sozinho, esse motor não leva você a lugar nenhum: não tem rodas, não tem volante, não tem tanque de combustível, não tem freio e nem banco para sentar. O motor é só <em>uma parte</em> do veículo. O React é exatamente isso: um "motor de interfaces" brilliantíssimo, criado pelo Facebook em 2013, que transforma dados em telas — mas que, sozinho, não sabe criar rotas, não sabe conversar com um banco de dados, não entrega a página pronta para o Google ler e não otimiza imagens.</p>
+<p>O Next.js entra como a montadora que pega esse motor e constrói o carro completo ao redor dele. Ele foi criado por Guillermo Rauch em 2016 (hoje na empresa Vercel) exatamente com essa visão: <strong>você escreve componentes React como sempre escreveu, e o Next entrega uma aplicação completa</strong> — com rotas automáticas, servidor embutido, páginas que chegam prontas no navegador, imagens que carregam sozinhas no tamanho certo e deploy com um comando. Você não precisa montar peça por peça: o carro já sai de fábrica com GPS, ar-condicionado e seguro.</p>
+<p>Isso é o que chamamos de <strong>framework fullstack</strong>: "full" porque cobre as duas pontas — o <em>front</em> (o que o usuário vê no navegador) e o <em>back</em> (o servidor que busca dados, consulta o banco e prepara a página); "stack" porque é um conjunto de ferramentas empilhadas que funcionam juntas. Em vez de você instalar dez bibliotecas diferentes e encaixar tudo na mão (roteador aqui, servidor ali, otimizador de imagem acolá), o Next.js já traz tudo isso.testado e integrado. A consecuencia prática: você cria um arquivo chamado <code>app/page.jsx</code> e, só por causa do nome e do lugar desse arquivo, ele vira a página inicial do seu site. É o que chamamos de <strong>rotas por convenção</strong>.</p>
+<div class="table-wrap"><table class="ref"><tr><th>Época</th><th>Marco</th><th>O que mudou</th></tr><tr><td>2016</td><td>Next.js 1.0</td><td>Lançado por Guillermo Rauch (Vercel): SSR fácil em cima do React, rotas por arquivo na pasta <code>pages/</code></td></tr><tr><td>2020</td><td>Next.js 9/10</td><td>Otimização automática de imagens (<code>next/image</code>), fontes e scripts;Commerce e grandes sites adotam em massa</td></tr><tr><td>2022</td><td>Next.js 13</td><td>Chega o <strong>App Router</strong> (pasta <code>app/</code>) com React Server Components</td></tr><tr><td>2023</td><td>Next.js 14</td><td>App Router vira o padrão estável; Turbopack acelera o servidor de desenvolvimento</td></tr><tr><td>2024</td><td>Next.js 15</td><td>Suporte ao React 19, cache mais previsível e mejoras de performance; hoje é a versão recomendada</td></tr></table></div>
+<h2>O mesmo componente, dois mundos</h2>
+<p>Olha só a diferença. Em um projeto React puro (criado com Vite, por exemplo), este componente existe, mas alguém precisa configurar rota, servidor e build para ele aparecer na internet:</p>
+<pre class="file" data-file="src/App.jsx">// React puro: um componente solto, sem rota e sem servidor
+export default function Saudacao() {
+  return &lt;h1&gt;Olá, mundo!&lt;/h1&gt;;
+}</pre>
+<p>Agora o mesmo componente dentro do Next.js. Repare: <strong>a lógica do componente é idêntica</strong> — o que muda é o endereço do arquivo e o que o Next faz com ele automaticamente:</p>
+<pre class="file" data-file="app/page.jsx">// Next.js: esse arquivo VIROU a rota "/" (a página inicial)
+// O servidor do Next já entrega esse HTML pronto no navegador
+export default function Home() {
+  return &lt;h1&gt;Olá, mundo!&lt;/h1&gt;;
+}</pre>
+<div class="tryreact" data-goal="Olá, Ana"><p class="try-task"><strong>Missão:</strong> edite o componente abaixo para ele mostrar <strong>"Olá, Ana!"</strong> no lugar de "Olá, mundo!" e aperte ▶ Rodar.</p><pre class="script" data-file="App.jsx">export default function Saudacao() {
+  return &lt;h1&gt;Olá, mundo!&lt;/h1&gt;;
+}</pre><pre class="solucao" data-file="App.jsx">export default function Saudacao() {
+  return &lt;h1&gt;Olá, Ana!&lt;/h1&gt;;
+}</pre></div>
+<figure class="tela"><img src="assets/telas/o-que-e-nextjs.png" alt="Página inicial do site nextjs.org mostrando o slogan The React Framework for the Web" width="1280" height="800" loading="lazy"><figcaption>A página inicial do nextjs.org: "The React Framework for the Web" — o Next.js se posiciona exatamente como o carro completo em cima do motor React.</figcaption></figure>
+<h2>Quando dá errado</h2>
+<p>Um erro clássico de quem está começando no Next.js é usar <code>window</code> ou <code>document</code> direto no corpo do componente. Lembra: no Next.js, <strong>seu componente roda primeiro no servidor</strong>, e no servidor não existe janela nem documento — existe só Node.js. O erro real que aparece no terminal é:</p>
+<div class="warning"><strong>Erro:</strong> tente usar <code>window.location.href</code> dentro de um componente do Next.js sem marcar "use client" e sem proteger a execução:</div>
+<pre class="out">ReferenceError: window is not defined
+
+  at Home (app/page.jsx:5:20)
+  at renderWithHooks (react-dom-server)
+  ...
+
+Dica do guia: no servidor não existe `window`. Se precisar do navegador,
+coloque "use client" no topo do arquivo (você verá isso no capítulo Server vs Client)
+ou leo valor dentro de um useEffect, que só roda no navegador.</pre>
+<h2>Exercícios</h2>
+<div class="mc" data-answer="2"><p class="mc-q">1. O que o Next.js adiciona ao React puro?</p><label><input type="radio" name="q1">Somente um novo tema de cores</label><label><input type="radio" name="q1">Servidor, rotas automáticas, renderização no servidor e otimizações (imagens, fontes, prefetch)</label><label><input type="radio" name="q1">Um banco de dados novo</label><label><input type="radio" name="q1">Nada — é só React renomeado</label><p class="mc-feedback"></p></div>
+<div class="mc" data-answer="3"><p class="mc-q">2. Em um projeto Next.js com App Router, qual arquivo vira a página inicial (rota "/")?</p><label><input type="radio" name="q2">index.html</label><label><input type="radio" name="q2">home.jsx</label><label><input type="radio" name="q2">app/page.jsx</label><label><input type="radio" name="q2">pages/index.js</label><p class="mc-feedback"></p></div>
+<div class="exercise" data-answer="app/page.jsx"><h2>Exercício 1</h2><p>Complete: no Next.js com App Router, para criar a página inicial do site, o arquivo deve se chamar <code>page.jsx</code> e ficar dentro de qual pasta?</p><div class="ex-code"><input class="ex-input" type="text" placeholder="ex.: app/..." style="width:100%"></div><div class="ex-actions"><button type="button">Verificar</button></div><p class="ex-result"></p></div>
+<div class="pager"></div></div></main></div><script src="assets/site.js"></script></body></html>

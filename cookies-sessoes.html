@@ -1,0 +1,147 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cookies e sessões | Guia Next.js</title><meta name="description" content="Aprenda a ler e gravar cookies no Next.js 15: cookies() e headers() assíncronos em Server Components, set/delete de cookie em Server Actions e Route Handlers, e uma sessão básica com cookie httpOnly.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
+<div class="pager"></div>
+<h1>Cookies e sessões básicas</h1>
+<p class="intro">A Ana 👩‍💻 queria que o visitante ficasse "logado" entre páginas sem mandar token no JavaScript. A resposta é o <strong>cookie httpOnly</strong>: um bilhete que o navegador guarda e manda de volta sozinho em cada pedido — o servidor lê com <code>await cookies()</code>, e só uma Server Action ou Route Handler pode <strong>escrever</strong> (<code>cookies().set</code>). Nesta página você monta uma sessão básica de login.</p>
+<div class="note"><strong>Você vai aprender</strong><ul><li><code>await cookies()</code> e <code>await headers()</code> em Server Components (Next 15 é async!)</li><li>Ler cookie: <code>store.get("sessao")?.value</code></li><li>Gravar/apagar cookie só em Server Action ou Route Handler</li><li>Opções: <code>httpOnly</code>, <code>path</code>, <code>maxAge</code>, <code>secure</code>, <code>sameSite</code></li><li>Uma sessão básica: login grava, página protege, logout apaga</li></ul></div>
+<hr><h2>A ideia: o crachá plastificado que o segurança carimba na entrada</h2>
+<p>Em um evento, na entrada o segurança carimba um <strong>crachá plastificado</strong> (o cookie) e te entrega. A partir daí, em cada porta interna, o segurança só olha o seu crachá — você não precisa mostrar documento de novo. O navegador faz exatamente isso: guarda o cookie e manda no header <code>Cookie:</code> de cada requisição sozinho.</p>
+<p>No Next.js 15, ler esse crachá no servidor é <code>const store = await cookies(); store.get("sessao")?.value</code> — dentro de um Server Component, Server Action ou Route Handler. É <strong>async</strong> agora (migração importante do Next 15). E gravar? Só dá para gravar ou apagar cookie dentro de uma <strong>Server Action</strong> ou <strong>Route Handler</strong> — nunca numa página renderizada, porque a resposta HTML já está sendo montada; o lugar certo é a action de login/logout.</p>
+<p>Para sessão, o padrão ouro é <code>httpOnly: true</code> (o JavaScript do navegador não consegue ler o cookie — protege contra roubo por XSS) + <code>secure: true</code> em produção (só HTTPS) + <code>sameSite: "lax"</code> (protege contra CSRF básico) + <code>maxAge</code> em segundos. Em produção real, troque o valor por um token assinado/JWT — aqui a Ana usa um valor simples só para aprender.</p>
+<h2>Ler cookies e headers no servidor</h2>
+<pre class="file" data-file="app/painel/page.jsx">import { cookies, headers } from "next/headers";
+import { redirect } from "next/navigation";
+
+export default async function Painel() {
+  // Next.js 15: cookies() e headers() são assíncronos — await obrigatório
+  const store = await cookies();
+  const sessao = store.get("sessao")?.value;
+
+  if (!sessao) redirect("/login"); // não logado -> manda pro login
+
+  const h = await headers();
+  const navegador = h.get("user-agent"); // dá para ler qualquer header do pedido
+
+  return (
+    &lt;div&gt;
+      &lt;h1&gt;Painel da Ana 👋&lt;/h1&gt;
+      &lt;p&gt;Sessão: {sessao.slice(0, 8)}…&lt;/p&gt;
+      &lt;small&gt;Seu navegador: {navegador}&lt;/small&gt;
+    &lt;/div&gt;
+  );
+}</pre>
+<h2>Login e logout: gravar e apagar o cookie na action</h2>
+<pre class="file" data-file="app/login/actions.js">"use server";
+
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+
+export async function entrar(estadoAnterior, formData) {
+  const email = formData.get("email");
+  const senha = formData.get("senha");
+
+  if (email !== "ana@exemplo.com" || senha !== "1234") {
+    return { erro: "E-mail ou senha errados" };
+  }
+
+  const store = await cookies();
+  store.set("sessao", "token-secreto-da-ana", {
+    httpOnly: true,        // JS do navegador não lê
+    secure: process.env.NODE_ENV === "production", // só HTTPS em produção
+    sameSite: "lax",       // manda o cookie em navegação normal
+    path: "/",             // vale no site inteiro
+    maxAge: 60 * 60 * 24,  // 1 dia, em segundos
+  });
+
+  redirect("/painel");
+}
+
+export async function sair() {
+  const store = await cookies();
+  store.delete("sessao"); // apaga o crachá
+  redirect("/login");
+}</pre>
+<h2>O formulário de login</h2>
+<pre class="file" data-file="app/login/LoginForm.jsx">"use client";
+
+import { useActionState } from "react";
+import { entrar } from "./actions";
+
+export default function LoginForm() {
+  const [state, formAction, pending] = useActionState(entrar, { erro: "" });
+  return (
+    &lt;form action={formAction}&gt;
+      &lt;input name="email" placeholder="seu@email" /&gt;
+      &lt;input name="senha" type="password" placeholder="senha" /&gt;
+      &lt;button disabled={pending}&gt;{pending ? "Entrando…" : "Entrar"}&lt;/button&gt;
+      {state.erro && &lt;small style={{ color: "red" }}&gt;{state.erro}&lt;/small&gt;}
+    &lt;/form&gt;
+  );
+}</pre>
+<table class="ref">
+<tr><th>Operação</th><th>Onde</th><th>Código</th></tr>
+<tr><td>Ler cookie</td><td>Server Component / Action / Route</td><td><code>const c = await cookies(); c.get("sessao")?.value</code></td></tr>
+<tr><td>Ler todos os cookies</td><td>idem</td><td><code>c.getAll()</code> → array de <code>{ name, value }</code></td></tr>
+<tr><td>Gravar cookie</td><td><strong>só em Server Action / Route Handler</strong></td><td><code>(await cookies()).set("sessao", "abc", { httpOnly: true, path: "/", maxAge: 3600 })</code></td></tr>
+<tr><td>Apagar cookie</td><td><strong>só em Server Action / Route Handler</strong></td><td><code>(await cookies()).delete("sessao")</code></td></tr>
+<tr><td>Ler header do pedido</td><td>Server Component / Action / Route</td><td><code>(await headers()).get("user-agent")</code></td></tr>
+<tr><td>Opções importantes</td><td>no <code>set</code></td><td><code>httpOnly</code>, <code>secure</code>, <code>sameSite: "lax"|"strict"</code>, <code>maxAge</code> (s), <code>path</code></td></tr>
+</table>
+<div class="tryreact" data-goal="httpOnly|delete|set\("><p class="try-task"><strong>Missão:</strong> simule o login da Ana: o objeto <code>cookies</code> guarda a sessão. Complete <code>fazerLogin()</code> para gravar <code>cookies.sessao = "abc123"</code> (como o <code>httpOnly</code> no servidor) e <code>fazerLogout()</code> para apagar com <code>delete cookies.sessao</code>. Rode os dois botões e veja o estado.</p><pre class="script" data-file="App.jsx">function App() {
+  // simula o pote de cookies do navegador
+  const [cookies, setCookies] = React.useState({});
+
+  // 👉 grava a sessão (equivalente a cookies().set("sessao", …, { httpOnly: true }))
+  function fazerLogin() {}
+
+  // 👉 apaga a sessão (equivalente a cookies().delete("sessao"))
+  function fazerLogout() {}
+
+  const logado = Boolean(cookies.sessao);
+
+  return (
+    &lt;div style={{ fontFamily: "sans-serif", padding: 16 }}&gt;
+      &lt;button onClick={fazerLogin}&gt;Entrar (grava cookie)&lt;/button&gt;
+      &lt;button onClick={fazerLogout}&gt;Sair (apaga cookie)&lt;/button&gt;
+      &lt;p&gt;{logado ? "Logado ✔ sessão: " + cookies.sessao : "Não logado"}&lt;/p&gt;
+    &lt;/div&gt;
+  );
+}</pre><pre class="solucao" data-file="App.jsx">function App() {
+  const [cookies, setCookies] = React.useState({});
+
+  function fazerLogin() {
+    setCookies({ ...cookies, sessao: "abc123" }); // httpOnly no servidor
+  }
+
+  function fazerLogout() {
+    const copia = { ...cookies };
+    delete copia.sessao;
+    setCookies(copia);
+  }
+
+  const logado = Boolean(cookies.sessao);
+
+  return (
+    &lt;div style={{ fontFamily: "sans-serif", padding: 16 }}&gt;
+      &lt;button onClick={fazerLogin}&gt;Entrar (grava cookie)&lt;/button&gt;
+      &lt;button onClick={fazerLogout}&gt;Sair (apaga cookie)&lt;/button&gt;
+      &lt;p&gt;{logado ? "Logado ✔ sessão: " + cookies.sessao : "Não logado"}&lt;/p&gt;
+    &lt;/div&gt;
+  );
+}</pre></div>
+<figure class="tela"><img src="assets/telas/cookies-sessoes.png" alt="Página lendo cookie de sessão com await cookies() e action de login gravando o cookie httpOnly" width="1280" height="800" loading="lazy"><figcaption>Fluxo da sessão: <code>entrar()</code> grava o cookie httpOnly → <code>/painel</code> lê com <code>await cookies()</code> e redireciona se não houver → <code>sair()</code> apaga.</figcaption></figure>
+<h2>Quando dá errado</h2>
+<div class="warning"><strong>Erro:</strong> tentar gravar cookie durante a renderização da página — a API nova avisa na hora:</div>
+<pre class="out">Error: Cookies can only be modified in a Server Action or Route Handler.
+Read more: https://nextjs.org/docs/messages/cookies-in-server-component
+// (ou, no Next 15, o aviso de que cookies() é async:)
+Error: cookies() should be awaited before using its value — `cookies` is a Promise in Next.js 15</pre>
+<p>Tradução: cookies só podem ser modificados numa Server Action ou Route Handler (numa página renderizada a resposta já está sendo escrita), e no Next 15 é preciso <code>await cookies()</code> antes de usar. <strong>Correção:</strong> faça o <code>set</code>/<code>delete</code> dentro da action de login/logout (como no exemplo) e sempre com <code>await</code>. Outro erro clássico: mandar o cookie sem <code>path: "/"</code> — aí ele só vale na rota atual e some na próxima página.</p>
+<h2>Exercícios</h2>
+<div class="mc" data-answer="3"><p class="mc-q">1. No Next.js 15, como se lê o cookie "sessao" num Server Component?</p><label><input type="radio"><code>cookies().get("sessao")</code></label><label><input type="radio"><code>(await cookies()).get("sessao")</code> — mas set não pode aqui</label><label><input type="radio"><code>const c = await cookies(); c.get("sessao")</code></label><label><input type="radio"><code>document.cookie</code></label><p class="mc-feedback"></p></div>
+<div class="mc" data-answer="2"><p class="mc-q">2. Onde se pode gravar um cookie com cookies().set(...)?</p><label><input type="radio">Em qualquer Server Component</label><label><input type="radio">Só em Server Action ou Route Handler</label><label><input type="radio">Em qualquer Client Component</label><label><input type="radio">Direto no middleware, em vez da página</label><p class="mc-feedback"></p></div>
+<div class="exercise" data-regex="httpOnly:\s*true,\s*secure:\s*true"><p><strong>3. Complete:</strong> quais as duas opções de segurança classici para um cookie de sessão?</p><div class="ex-code"><input class="ex-input" type="text" placeholder="escreva aqui…" style="width:100%"></div><div class="ex-actions"><button type="button">Verificar</button></div><p class="ex-result"></p></div>
+<div class="pager"></div></div></main></div><script src="assets/site.js"></script></body></html>

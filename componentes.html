@@ -1,0 +1,80 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Componentes no Next.js | Guia Next.js</title><meta name="description" content="Aprenda a criar componentes no Next.js: arquivos em components/, export default, import entre arquivos, Server Component importando Client Component e a regra de onde salvar cada peça.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
+<div class="pager"></div>
+<h1>Componentes</h1>
+<p class="intro">O <code>app/page.jsx</code> da Ana já está com um monte de HTML dentro de uma função só. Hora de organizar: quebrar em <strong>componentes</strong> — pedacinhos de LEGO reutilizáveis, cada um num arquivo próprio. Nesta página você vai criar a pasta <code>components/</code>, escrever o primeiro componente e importar ele na página.</p>
+<div class="note"><strong>Você vai aprender</strong><ul><li>O que é um componente: função que retorna JSX, um por arquivo</li><li>Onde guardar: pasta <code>components/</code> na raiz do projeto</li><li><code>export default</code> + <code>import Nome from "../components/Nome"</code></li><li>Componente Server importando outro Server (padrão) e Server importando Client</li><li>Regra: arquivo de componente começa com letra maiúscula</li></ul></div>
+<hr><h2>A ideia: LEGO — uma peça por vez, encaixando no fim</h2>
+<p>Imagine que a Ana está montando um castelo de LEGO. Ela não derrete um bloco gigante de plástico e pronto — ela pega peças menores (uma torre, uma porta, uma janela) e encaixa uma na outra até o castelo existir. Cada peça faz <strong>uma coisa só</strong>, tem um nome e pode ser reutilizada em outros castelos. Um componente React é exatamente uma peça de LEGO: uma função JavaScript que retorna um pedacinho de interface, com um nome (sempre com letra maiúscula, como <code>Header</code>), num arquivo próprio. A página monta o site encaixando essas peças: <code>&lt;Header /&gt;</code>, <code>&lt;Card /&gt;</code>, <code>&lt;Footer /&gt;</code>.</p>
+<p>A convenção do Next.js é simples: crie uma pasta <code>components/</code> na raiz do projeto (fora de <code>app/</code>, para não virar rota!) e coloque cada componente lá dentro, um arquivo por peça: <code>components/Header.jsx</code>, <code>components/Card.jsx</code>. Para usar, importe com o caminho relativo ou com o alias <code>@/</code> (se o create-next-app configurou): <code>import Header from "@/components/Header"</code> ou <code>import Header from "../components/Header"</code> de dentro de <code>app/</code>. Dentro do JSX, use como tag: <code>&lt;Header /&gt;</code>.</p>
+<p>Uma regra de ouro do App Router: um <strong>Server Component (padrão) pode importar outro Server Component</strong> sem problema nenhum — é só JavaScript. Ele também pode importar um <strong>Client Component</strong> (um com "use client") e passar props serializáveis — o Next cuida da mágica. O caminho inverso (Client importando Server) não funciona: se o componente filho é interativo, quem manda nele é o pai server.</p>
+<h2>Criando o primeiro componente da Ana</h2>
+<pre class="file" data-file="components/Header.jsx">import Link from "next/link";
+
+export default function Header() {
+  return (
+    &lt;header&gt;
+      &lt;strong&gt;MeuSite&lt;/strong&gt;
+      &lt;nav&gt;
+        &lt;Link href="/"&gt;Início&lt;/Link&gt;
+        &lt;Link href="/sobre"&gt;Sobre&lt;/Link&gt;
+      &lt;/nav&gt;
+    &lt;/header&gt;
+  );
+}</pre>
+<pre class="file" data-file="app/page.jsx">import Header from "../components/Header";
+
+export default function Home() {
+  return (
+    &lt;&gt;
+      &lt;Header /&gt;
+      &lt;main&gt;
+        &lt;h1&gt;Olá, Next.js! 👋&lt;/h1&gt;
+        &lt;p&gt;Agora com componentes separados.&lt;/p&gt;
+      &lt;/main&gt;
+    &lt;/&gt;
+  );
+}</pre>
+<figure class="tela"><img src="assets/telas/componentes.png" alt="Diagrama de árvore: App (page.jsx) no topo usando os componentes Header, Card e Footer abaixo" width="1280" height="800" loading="lazy"><figcaption>A página monta o site encaixando peças: <code>&lt;Header /&gt;</code>, <code>&lt;Card /&gt;</code>, <code>&lt;Footer /&gt;</code> — cada um no seu arquivo.</figcaption></figure>
+<div class="table-wrap"><table class="ref"><tr><th>Regra</th><th>Exemplo</th></tr><tr><td>Um componente por arquivo, nome = nome do arquivo com maiúscula</td><td><code>components/Header.jsx</code> → <code>Header</code></td></tr><tr><td>Export padrão</td><td><code>export default function Header() { ... }</code></td></tr><tr><td>Import no outro arquivo</td><td><code>import Header from "../components/Header";</code> (ou <code>"@/components/Header"</code>)</td></tr><tr><td>Uso no JSX (tag com maiúscula)</td><td><code>&lt;Header /&gt;</code></td></tr><tr><td>Componente fora de app/ para não virar rota</td><td><code>components/</code> na raiz — <code>app/Header.jsx</code> viraria rota!</td></tr><tr><td>Client Component dentro de Server</td><td>Server importa Client: ✅ permitido (props serializáveis)</td></tr></table></div>
+<div class="tryreact" data-goal="Header"><p class="try-task"><strong>Missão:</strong> no código abaixo, crie um componente chamado <code>Header</code> que retorna um <code>&lt;h1&gt;Meu Site&lt;/h1&gt;</code> e use <code>&lt;Header /&gt;</code> dentro do App. Aperte ▶ Rodar.</p><pre class="script" data-file="App.jsx">export default function App() {
+  return (
+    &lt;main&gt;
+      &lt;p&gt;sem header ainda&lt;/p&gt;
+    &lt;/main&gt;
+  );
+}</pre><pre class="solucao" data-file="App.jsx">function Header() {
+  return &lt;h1&gt;Meu Site&lt;/h1&gt;;
+}
+
+export default function App() {
+  return (
+    &lt;main&gt;
+      &lt;Header /&gt;
+      &lt;p&gt;com header!&lt;/p&gt;
+    &lt;/main&gt;
+  );
+}</pre></div>
+<h2>Quando dá errado</h2>
+<div class="warning"><strong>Erro 1:</strong> a Ana criou o componente dentro de <code>app/</code> e ele virou rota ou deu conflito:</div>
+<pre class="out">⚠ Conflicting app and page file / a rota /Header passou a existir
+
+Dica do guia: componentes reutilizáveis vão em components/ na RAIZ,
+fora de app/. Dentro de app/ só page.jsx, layout.jsx e arquivos de rota.</pre>
+<div class="warning"><strong>Erro 2:</strong> esqueceu o export default e a import falhou:</div>
+<pre class="out">Error: Attempted import error: 'Header' is not exported from
+'components/Header.jsx' (imported as 'Header').
+
+Dica do guia: o componente precisa de `export default function Header()`.
+Se usar export nomeado, a import muda para `import { Header } from ...`.</pre>
+<div class="warning"><strong>Erro 3:</strong> nome do componente com letra minúscula no JSX:</div>
+<pre class="out">&lt;header /&gt; é tratado como tag HTML nativa (minúscula = elemento do
+navegador). Para componente React, SEMPRE maiúscula: &lt;Header /&gt;.</pre>
+<h2>Exercícios</h2>
+<div class="mc" data-answer="2"><p class="mc-q">1. Onde a Ana deve guardar componentes reutilizáveis (que não são rotas)?</p><label><input type="radio" name="q1">Dentro de app/</label><label><input type="radio" name="q1">Na pasta components/ na raiz do projeto</label><label><input type="radio" name="q1">Dentro de node_modules/</label><label><input type="radio" name="q1">Em public/</label><p class="mc-feedback"></p></div>
+<div class="mc" data-answer="1"><p class="mc-q">2. Como se usa o componente <code>Header</code> (importado) dentro do JSX?</p><label><input type="radio" name="q1">&lt;Header /&gt;</label><label><input type="radio" name="q1">&lt;header /&gt;</label><label><input type="radio" name="q1">{Header}</label><label><input type="radio" name="q1">import Header()</label><p class="mc-feedback"></p></div>
+<div class="exercise" data-answer="export default function Header"><h2>Exercício 1</h2><p>Escreva a primeira linha de um componente chamado <code>Header</code> exportado como padrão:</p><div class="ex-code"><input class="ex-input" type="text" placeholder="export ..." style="width:100%"></div><div class="ex-actions"><button type="button">Verificar</button></div><p class="ex-result"></p></div>
+<div class="pager"></div></div></main></div><script src="assets/site.js"></script></body></html>

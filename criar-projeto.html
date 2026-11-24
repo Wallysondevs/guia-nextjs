@@ -1,0 +1,65 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Criando o projeto com create-next-app | Guia Next.js</title><meta name="description" content="Aprenda a criar um projeto Next.js do zero com npx create-next-app@latest: cada pergunta interativa explicada, as flags para pular o modo interativo e o terminal da Ana.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
+<div class="pager"></div>
+<h1>Criando o projeto</h1>
+<p class="intro">Com o Node instalado, chegou a hora de a Ana criar o primeiro projeto. O comando mágico é <code>npx create-next-app@latest</code>: ele baixa o assistente oficial, faz algumas perguntas e entrega uma pasta pronta com tudo configurado. Nesta página você vai rodar esse comando e entender <em>cada pergunta</em> que ele faz.</p>
+<div class="note"><strong>Você vai aprender</strong><ul><li>Rodar <code>npx create-next-app@latest meu-app</code></li><li>O que significa cada pergunta interativa (TypeScript, ESLint, Tailwind, src/, App Router, Turbopack, alias)</li><li>Quais flags usar para criar o projeto sem perguntas (<code>--yes</code> / flags nomeadas)</li><li>Como entrar na pasta e conferir que deu certo</li></ul></div>
+<hr><h2>A ideia: o create-next-app é a Concessionária que monta seu carro zero</h2>
+<p>Comprar um carro zero km não é só "pegar as chaves": a concessionária pergunta cor, câmbio, se quer teto solar, seguro, blindagem... e no fim você sai com um carro montado do jeito que você pediu, com manual e garantia. O <code>create-next-app</code> funciona exatamente assim: ele é o assistente oficial que "monta o carro" (o projeto) fazendo uma entrevista rápida. Cada pergunta escolhe uma peça do seu projeto: se vai ter TypeScript (tipagem estática), ESLint (o "revisor" que acha erro antes de rodar), Tailwind (um kit de CSS utilitário), a pasta <code>src/</code>, o App Router, o Turbopack e o alias de importação <code>@/*</code>.</p>
+<p>O <code>npx</code> no começo é só um ajudante do npm: ele baixa o pacote <code>create-next-app</code> na hora (por isso o <code>@latest</code>, que garante a versão mais nova) e executa, <strong>sem instalar nada globalmente no seu computador</strong>. Ou seja: na primeira vez ele baixa rapidinho; depois usa o cache. Pense no <code>npx</code> como "empréstimo de ferramenta": você usa e devolve, não precisa comprar.</p>
+<p>Para o guia inteiro, as respostas da Ana são: <strong>TypeScript: Yes</strong> (o guia usa <code>.jsx</code> nos exemplos para ficar mais leve, mas o projeto pode ser TS — a lógica é idêntica), <strong>ESLint: Yes</strong>, <strong>Tailwind: No</strong> (vamos aprender CSS puro primeiro no capítulo de estilos), <strong>src/: No</strong>, <strong>App Router: Yes</strong> (essencial!), <strong>Turbopack: Yes</strong> e <strong>alias @/*: padrão (Yes)</strong>.</p>
+<h2>Rodando o assistente (terminal da Ana)</h2>
+<pre class="file" data-file="terminal">ana@notebook:~$ npx create-next-app@latest meu-app
+
+✔ Qual o nome do projeto? … meu-app
+✔ Usar TypeScript? … Yes
+✔ Usar ESLint? … Yes
+✔ Usar Tailwind CSS? … No
+✔ Usar o diretório src/? … No
+✔ Usar App Router? … Yes
+✔ Usar Turbopack para o dev? … Yes
+✔ Personalizar o alias de import (@/*)? … No
+
+Creating a new Next.js app in /home/ana/meu-app.
+Installing dependencies: react, react-dom, next…
+Success! ✨  Happy coding!</pre>
+<figure class="tela"><img src="assets/telas/criar-projeto.png" alt="Terminal mostrando o create-next-app perguntando TypeScript, ESLint, Tailwind, src, App Router e terminando com Success!" width="1280" height="800" loading="lazy"><figcaption>O assistente interativo do <code>create-next-app</code>: cada ✔ é uma escolha que vira configuração do projeto.</figcaption></figure>
+<h2>Sem perguntas: flags no próprio comando</h2>
+<p>Se a Ana já sabe as respostas (ou quer automatizar), dá para passar tudo na linha de comando e pular o modo interativo:</p>
+<pre class="file" data-file="terminal">ana@notebook:~$ npx create-next-app@latest meu-app \
+  --typescript --eslint --no-tailwind --no-src-dir \
+  --app --turbopack --import-alias "@/*" --use-npm
+
+# ou simplesmente aceitar os padrões de uma vez:
+ana@notebook:~$ npx create-next-app@latest meu-app --yes</pre>
+<h2>Entrando no projeto</h2>
+<pre class="file" data-file="terminal">ana@notebook:~$ cd meu-app
+ana@notebook:~/meu-app$ ls
+app  node_modules  package.json  next.config.mjs  public  .gitignore
+ana@notebook:~/meu-app$ code .        # abre no VS Code (opcional)</pre>
+<h2>Quando dá errado</h2>
+<p>Erros reais que a Ana pode encontrar na criação:</p>
+<div class="warning"><strong>Erro 1:</strong> nome de pasta inválido (caractere especial ou pasta já existe):</div>
+<pre class="out">error: could not create project "meu app!" — invalid name.
+
+Dica do guia: use só letras minúsculas, números, hífen e underline,
+sem espaços: meu-app, site-da-ana, portfolio2025.</pre>
+<div class="warning"><strong>Erro 2:</strong> a pasta já existe e não está vazia:</div>
+<pre class="out">Error: The directory meu-app is not empty.
+
+Dica do guia: escolha outro nome ou remova a pasta antiga
+(`rm -rf meu-app` — cuidado, apaga tudo dentro).</pre>
+<div class="warning"><strong>Erro 3:</strong> sem internet para baixar os pacotes:</div>
+<pre class="out">npm ERR! network request to https://registry.npmjs.org/... failed.
+
+Dica do guia: o create-next-app precisa baixar ~300MB de dependências.
+Conecte na internet e rode de novo — o npx usa cache, então a segunda
+tentativa continua de onde parou.</pre>
+<h2>Exercícios</h2>
+<div class="mc" data-answer="1"><p class="mc-q">1. Qual comando cria um projeto Next.js novo chamado "meu-app" com a versão mais recente do assistente?</p><label><input type="radio" name="q1">npx create-next-app@latest meu-app</label><label><input type="radio" name="q1">npm install next meu-app</label><label><input type="radio" name="q1">node create meu-app</label><label><input type="radio" name="q1">next new meu-app --global</label><p class="mc-feedback"></p></div>
+<div class="mc" data-answer="2"><p class="mc-q">2. Na pergunta "✔ Usar App Router?", o que o guia manda responder?</p><label><input type="radio" name="q2">No</label><label><input type="radio" name="q2">Yes</label><label><input type="radio" name="q2">Tanto faz</label><label><input type="radio" name="q2">Pular a pergunta</label><p class="mc-feedback"></p></div>
+<div class="exercise" data-answer="cd meu-app"><h2>Exercício 1</h2><p>Depois que o <code>create-next-app</code> termina, qual comando entra na pasta do projeto recién-criado chamado <code>meu-app</code>?</p><div class="ex-code"><input class="ex-input" type="text" placeholder="ex.: cd ..." style="width:100%"></div><div class="ex-actions"><button type="button">Verificar</button></div><p class="ex-result"></p></div>
+<div class="pager"></div></div></main></div><script src="assets/site.js"></script></body></html>

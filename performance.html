@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Performance e Core Web Vitals: LCP, INP e CLS | Guia Next.js</title>
+<meta name="description" content="Meça e melhore a velocidade real do seu app Next.js: Core Web Vitals (LCP, INP, CLS), Lighthouse, next/script, preload, useTransition e o relatório de velocidade que o próprio Next.js mostra no canto da página em dev.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+<div class="pager"></div>
+<h1>Performance e Core Web Vitals: LCP, INP e CLS</h1>
+<p class="intro">"Rápido" é subjetivo — o Google mede a experiência real do usuário com três números: <strong>LCP</strong> (quando o maior conteúdo apareceu), <strong>INP</strong> (quanto tempo a página levou para reagir ao clique) e <strong>CLS</strong> (quanto a página pulou de lugar). Nesta aula a Ana aprende a medir esses números no próprio Next.js e a consertar os três pecados mais comuns.</p>
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>Os 3 Core Web Vitals e os valores "bons" de cada um (LCP &lt; 2.5s, INP &lt; 200ms, CLS &lt; 0.1)</li>
+<li>O indicador de velocidade que o Next.js mostra no canto em <code>dev</code> (e o <code>Speed Insights</code> em produção)</li>
+<li>Lighthouse no DevTools e no <code>pagespeed.web.dev</code></li>
+<li>Correções típicas: <code>priority</code> no LCP, <code>next/script</code> para terceiros, <code>useTransition</code> para buscas, reserva de espaço contra CLS</li>
+<li><code>next build</code> já avisa quando uma página ficou pesada</li>
+</ul></div>
+<hr>
+<h2>A ideia: a loja física e os três combinado</h2>
+<p>Pense numa loja física. O <strong>LCP</strong> é o tempo até a <strong>vitrine principal</strong> estar montada — se a vitrine demora, o cliente vai embora antes de ver nada. No site, a vitrine é a maior imagem/texto acima da dobra; deixe-a com <code>priority</code> no <code>&lt;Image&gt;</code> e a fonte com <code>next/font</code> (sem bloqueio), que o LCP cai.</p>
+<p>O <strong>INP</strong> é o tempo entre o cliente <strong>apontar para um produto</strong> e o atendente reagir. No site, é o clique no botão e a resposta da página. Se o clique dispara um trabalho pesado no mesmo frame (filtrar uma lista gigante, navegar), a página "congela" e o INP piora. A saída é o <code>useTransition</code> (marca a atualização como não urgente) e o streaming/Suspense da aula anterior.</p>
+<p>E o <strong>CLS</strong> é a <strong>prateleira que muda de lugar</strong> enquanto o cliente olha — medida de "estabilidade visual". A causa nº 1 é imagem/fonte sem tamanho reservado: conserte com <code>width</code>/<code>height</code> no <code>&lt;Image&gt;</code> e <code>next/font</code> (aula anterior). Anúncios que empurram conteúdo também entram aqui.</p>
+<h2>Medindo no próprio projeto</h2>
+<pre class="file" data-file="terminal">npm run dev
+# no canto inferior esquerdo da página (modo dev) aparece o selo de velocidade:
+#   ⚡ 45ms  ← tempo de render do servidor daquela rota
+
+npm install @vercel/speed-insights   # mede RUM (usuários de verdade) em produção</pre>
+<pre class="file" data-file="app/layout.jsx">import { SpeedInsights } from '@vercel/speed-insights/next';
+
+export default function RootLayout({ children }) {
+  return (
+    &lt;html lang="pt-BR"&gt;
+      &lt;body&gt;
+        {children}
+        &lt;SpeedInsights /&gt;  {/* coleta LCP/INP/CLS dos visitantes reais */}
+      &lt;/body&gt;
+    &lt;/html&gt;
+  );
+}</pre>
+<pre class="file" data-file="terminal"># Lighthouse direto no Chrome: DevTools (F12) → aba Lighthouse → Analyze
+# ou no site: https://pagespeed.web.dev/  → cola a URL do deploy</pre>
+<pre class="out">Core Web Vitals (field data, usuários reais):
+  LCP  1.8 s   ✅ bom (&lt; 2.5 s)
+  INP  120 ms  ✅ bom (&lt; 200 ms)
+  CLS  0.02    ✅ bom (&lt; 0.1)&lt;/nPerformance score: 96/100</pre>
+<h2>Correções rápidas que resolvem 80% dos casos</h2>
+<pre class="file" data-file="app/busca/BuscaClient.jsx">'use client';
+import { useState, useTransition } from 'react';
+
+export default function BuscaClient({ produtos }) {
+  const [filtro, setFiltro] = useState('');
+  const [resultado, setResultado] = useState(produtos);
+  const [pendente, startTransition] = useTransition(); // clique não trava a página
+
+  function aoDigitar(e) {
+    const valor = e.target.value;
+    setFiltro(valor); // urgente: atualiza o input na hora
+    startTransition(() =&gt; {
+      setResultado(produtos.filter(p =&gt; p.nome.includes(valor))); // pesado: pode esperar
+    });
+  }
+
+  return (
+    &lt;&gt;
+      &lt;input value={filtro} onChange={aoDigitar} placeholder="Buscar…" /&gt;
+      {pendente &amp;&amp; &lt;small&gt;procurando…&lt;/small&gt;}
+      &lt;ul&gt;{resultado.map(p =&gt; &lt;li key={p.id}&gt;{p.nome}&lt;/li&gt;)}&lt;/ul&gt;
+    &lt;/&gt;
+  );
+}</pre>
+<table class="ref"><thead><tr><th>Métrica</th><th>O que mede</th><th>Bom</th><th>Causa comum no Next.js</th><th>Correção</th></tr></thead><tbody>
+<tr><td><strong>LCP</strong></td><td>Tempo até o maior conteúdo visível</td><td>&lt; 2.5 s</td><td>Imagem hero sem <code>priority</code>, fonte externa bloqueante</td><td><code>priority</code> no Image, <code>next/font</code></td></tr>
+<tr><td><strong>INP</strong></td><td>Atraso na resposta à interação</td><td>&lt; 200 ms</td><td>Trabalho pesado no clique (filtro, navegação)</td><td><code>useTransition</code>, streaming</td></tr>
+<tr><td><strong>CLS</strong></td><td>Quanto o layout pulou</td><td>&lt; 0.1</td><td>Imagem sem tamanho, fonte que troca, ads</td><td>width/height/fill, next/font</td></tr>
+</tbody></table>
+<div class="tryreact" data-goal="useMemo"><p class="try-task"><strong>Missão:</strong> a lista abaixo é filtrada a cada tecla <strong>sem memoização</strong> — com 10 mil produtos, o clique fica lento (INP ruim). Envolva o filtro em <code>useMemo</code> (disponível no topo) para recalcular só quando o texto mudar. Rode e clique em <em>Verificar missão</em>.</p><pre class="script" data-file="App.jsx">const PRODUTOS = Array.from({ length: 5000 }, (_, i) =&gt; ({ id: i, nome: `Produto ${i}` }));
+
+function App() {
+  const [texto, setTexto] = React.useState('');
+  // TODO: const resultado = useMemo(() =&gt; PRODUTOS.filter(p =&gt; p.nome.includes(texto)), [texto]);
+  const resultado = PRODUTOS.filter(p =&gt; p.nome.includes(texto));
+
+  return (
+    &lt;div&gt;
+      &lt;h1&gt;🔍 Busca&lt;/h1&gt;
+      &lt;input value={texto} onChange={e =&gt; setTexto(e.target.value)} placeholder="digite um número…" /&gt;
+      &lt;p&gt;{resultado.length} resultados&lt;/p&gt;
+      &lt;ul&gt;{resultado.slice(0, 5).map(p =&gt; &lt;li key={p.id}&gt;{p.nome}&lt;/li&gt;)}&lt;/ul&gt;
+    &lt;/div&gt;
+  );
+}</pre><pre class="solucao" data-file="App.jsx">const PRODUTOS = Array.from({ length: 5000 }, (_, i) =&gt; ({ id: i, nome: `Produto ${i}` }));
+
+function App() {
+  const [texto, setTexto] = React.useState('');
+  const resultado = useMemo(() =&gt; PRODUTOS.filter(p =&gt; p.nome.includes(texto)), [texto]);
+
+  return (
+    &lt;div&gt;
+      &lt;h1&gt;🔍 Busca&lt;/h1&gt;
+      &lt;input value={texto} onChange={e =&gt; setTexto(e.target.value)} placeholder="digite um número…" /&gt;
+      &lt;p&gt;{resultado.length} resultados&lt;/p&gt;
+      &lt;ul&gt;{resultado.slice(0, 5).map(p =&gt; &lt;li key={p.id}&gt;{p.nome}&lt;/li&gt;)}&lt;/ul&gt;
+    &lt;/div&gt;
+  );
+}</pre></div>
+<figure class="tela"><img src="assets/telas/n3-performance.png" alt="Relatório de Core Web Vitals no PageSpeed Insights" width="1280" height="800" loading="lazy"><figcaption>PageSpeed Insights mostra os Core Web Vitals reais (field data) e o score de performance da página.</figcaption></figure>
+<h2>Quando dá errado</h2>
+<div class="warning"><strong>Erro real de CLS:</strong> a Ana colocou um banner de cookies depois que a página já pintou, e o conteúdo pulou para baixo. O Lighthouse acusa:</div>
+<pre class="out">CLS: 0.25 (ruim) — "Evite grandes mudanças de layout"
+  Elemento que mais shiftou: &lt;img src="/banner.jpg"&gt; sem width/height
+→ reserve espaço (width/height/fill) ou carregue o banner com priority/antes da pintura.</pre>
+<div class="warning"><strong>LCP alto no relatório:</strong> a maior imagem da página era um carrossel carregado por biblioteca de cliente pesada. O build avisa:</div>
+<pre class="out">ƒ /carrossel   First Load JS 380 kB  ⚠ acima do orçamento sugerido (170 kB)
+→ troque por dynamic(..., { ssr: false }) ou imagens estáticas com &lt;Image priority&gt;.</pre>
+<h2>Exercícios</h2>
+<div class="mc" data-answer="1"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">Qual métrica mede "quanto a página pulou de lugar" ao carregar?</p><label><input type="radio" name="q1">CLS (Cumulative Layout Shift)</label><label><input type="radio" name="q1">LCP</label><label><input type="radio" name="q1">INP</label></div>
+<div class="mc" data-answer="2"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">O LCP bom (segundo o Google) é:</p><label><input type="radio" name="q2">Menor que 0.1 segundos</label><label><input type="radio" name="q2">Menor que 2.5 segundos</label><label><input type="radio" name="q2">Menor que 10 segundos</label></div>
+<div class="mc" data-answer="3"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">Um clique que dispara um filtro pesado deve usar:</p><label><input type="radio" name="q3"><code>setTimeout</code> manual</label><label><input type="radio" name="q3"><code>alert()</code> para travar a página</label><label><input type="radio" name="q3"><code>useTransition</code> — a UI continua responsiva (INP bom)</label></div>
+<div class="exercise" data-answer="200"><p>Complete o valor "bom" de INP:</p><div class="ex-code">INP &lt; <input class="ex-input" autocomplete="off" spellcheck="false" autocapitalize="off"> ms</div><div class="ex-actions"><button type="button">Verificar</button><span class="ex-result" aria-live="polite"></span></div></div>
+<div class="exercise" data-answer="priority"><p>Complete a prop que faz a imagem hero carregar na hora (melhora o LCP):</p><div class="ex-code">&lt;Image src="/hero.jpg" width={1200} height={600} alt="…" <input class="ex-input" autocomplete="off" spellcheck="false" autocapitalize="off"> /&gt;</div><div class="ex-actions"><button type="button">Verificar</button><span class="ex-result" aria-live="polite"></span></div></div>
+<div class="pager"></div>
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Instalando Node e npm | Guia Next.js</title><meta name="description" content="Passo a passo para instalar o Node.js 18+ (recomendado 20+) e o npm no Linux, macOS ou Windows, e como conferir se a instalação deu certo com node -v e npm -v.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
+<div class="pager"></div>
+<h1>Instalando Node e npm</h1>
+<p class="intro">Antes de criar qualquer projeto, a Ana precisa de duas ferramentas no computador: o <strong>Node.js</strong> (o ambiente que roda JavaScript fora do navegador — é ele quem executa o servidor do Next.js) e o <strong>npm</strong> (o gerenciador de pacotes, que baixa as dependências). Nesta página você instala os dois e confere se deu certo.</p>
+<div class="note"><strong>Você vai aprender</strong><ul><li>Qual versão do Node.js o Next.js 15 exige (18.18+ ou 20+, recomendado 20 LTS)</li><li>Como instalar pelo site oficial nodejs.org (Linux, macOS e Windows)</li><li>Como usar o nvm para trocar de versão facilmente (opcional)</li><li>Como conferir a instalação com <code>node -v</code> e <code>npm -v</code></li></ul></div>
+<hr><h2>A ideia: o Node é a tomada, o npm é a loja de material elétrico</h2>
+<p>Todo código JavaScript que você escreveu até hoje rodava <em>dentro do navegador</em> — dentro do Chrome, do Firefox, do Safari. O navegador tem o motor V8 dentro dele para executar esse código. O problema: o servidor do Next.js não roda dentro de um navegador, roda no seu computador (ou em um servidor na nuvem). Para isso existir, alguém precisa dar um "ambiente JavaScript" para o computador inteiro. Esse ambiente é o <strong>Node.js</strong>: ele pega o motor V8 do Chrome, tira de dentro do navegador e instala como um programa normal no seu sistema. A partir daí, qualquer comando seu pode rodar JavaScript direto no terminal — é por isso que o servidor do Next.js existe.</p>
+<p>E o <strong>npm</strong>? Pense nele como a loja de material elétrico da esquina. Quando o Next.js precisa de uma peça — um roteador, um otimizador de imagens, o próprio React — ele não fabrica do zero: ele pega pronto na loja, que é o registro público de pacotes npm (npmjs.com). O comando <code>npm install</code> é literalmente "vá até a loja e traga essas peças para o meu projeto". O npm já vem junto com a instalação do Node.js, então instalando um, você ganha os dois.</p>
+<p>Sobre a versão: o Next.js 15 exige no mínimo o Node.js <strong>18.18.0</strong> (ou qualquer 20+). A recomendação oficial é usar a versão <strong>LTS</strong> (Long Term Support — "suporte de longo prazo"), que hoje é a linha 20.x ou 22.x. Se o seu Node for mais antigo que 18.18, o Next.js recusa rodar com um erro claro de versão. Instale sempre a versão LTS mais recente pelo site oficial.</p>
+<h2>Passo a passo</h2>
+<p><strong>1. Baixe no site oficial.</strong> Entre em <code>https://nodejs.org</code> e clique no botão grande da versão <strong>LTS</strong> (etiqueta verde). Baixe o instalador do seu sistema: <code>.pkg</code> no macOS, <code>.msi</code> no Windows, ou o pacote para a sua distribuição Linux (no Ubuntu/Debian: <code>sudo apt install nodejs npm</code> pode traer versão velha — prefira o NodeSource ou o binário oficial em <code>.tar.xz</code>).</p>
+<p><strong>2. Instale e abra o terminal.</strong> No Linux/macOS abra o Terminal; no Windows, procure por "Prompt de Comando" ou "PowerShell".</p>
+<p><strong>3. Confira as versões</strong> — é aqui que a Ana confirma que a tomada está funcionando:</p>
+<pre class="file" data-file="terminal">ana@notebook:~$ node -v
+v20.18.1
+ana@notebook:~$ npm -v
+10.9.2
+ana@notebook:~$ npx -v
+10.9.2</pre>
+<figure class="tela"><img src="assets/telas/instalando.png" alt="Terminal mostrando os comandos node -v e npm -v retornando v20.18.1 e 10.9.2" width="1280" height="800" loading="lazy"><figcaption>Depois de instalar, <code>node -v</code> e <code>npm -v</code> precisam responder com números de versão — se aparecer isso, está tudo pronto.</figcaption></figure>
+<div class="tip"><strong>Dica (opcional):</strong> instale o <strong>nvm</strong> (Node Version Manager) em <code>https://github.com/nvm-sh/nvm</code>. Com ele, a Ana troca de versão com <code>nvm install 20</code> e <code>nvm use 20</code> — útil quando um projeto antigo exige Node 16 e o novo exige Node 20.</div>
+<h2>Quando dá errado</h2>
+<p>O erro mais comum é o terminal não encontrar o comando depois da instalação:</p>
+<div class="warning"><strong>Erro:</strong> digitar <code>node -v</code> e o terminal responder que o comando não existe:</div>
+<pre class="out">ana@notebook:~$ node -v
+bash: node: comando não encontrado
+
+Dica do guia: ou o Node não foi instalado, ou a pasta de instalação não está
+no PATH. No Linux, confira com `which node`. Se instalou pelo .tar.xz, adicione
+o caminho ao PATH no ~/.bashrc:
+  export PATH="/caminho/do/node-v20/bin:$PATH"
+Depois feche e abra o terminal de novo e teste `node -v`.</pre>
+<p>Outro erro real: versão antiga demais:</p>
+<pre class="out">node -v  →  v16.20.2
+
+Unsupported Node.js version: v16.20.2. Next.js requires Node.js 18.18.0 or higher.
+
+Dica do guia: atualize o Node para a LTS atual (20.x ou 22.x) pelo nodejs.org
+ou com o nvm: `nvm install 20 &amp;&amp; nvm use 20`.</pre>
+<h2>Exercícios</h2>
+<div class="mc" data-answer="2"><p class="mc-q">1. Qual comando mostra a versão do Node.js instalada?</p><label><input type="radio" name="q1">npm version</label><label><input type="radio" name="q1">node -v</label><label><input type="radio" name="q1">node --version</label><label><input type="radio" name="q1">As duas primeiras opções estão certas</label><p class="mc-feedback"></p></div>
+<div class="mc" data-answer="4"><p class="mc-q">2. Qual é a versão mínima do Node.js exigida pelo Next.js 15?</p><label><input type="radio" name="q2">14.x</label><label><input type="radio" name="q2">16.x</label><label><input type="radio" name="q2">17.x</label><label><input type="radio" name="q2">18.18.0 ou superior (recomendado 20 LTS+)</label><p class="mc-feedback"></p></div>
+<div class="exercise" data-answer="node -v"><h2>Exercício 1</h2><p>Escreva o comando que você usaria no terminal para descobrir qual versão do Node.js está instalada no seu computador:</p><div class="ex-code"><input class="ex-input" type="text" placeholder="ex.: npm ..." style="width:100%"></div><div class="ex-actions"><button type="button">Verificar</button></div><p class="ex-result"></p></div>
+<div class="pager"></div></div></main></div><script src="assets/site.js"></script></body></html>

@@ -1,0 +1,126 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rotas dinâmicas [id] | Guia Next.js</title><meta name="description" content="Aprenda a criar páginas dinâmicas no App Router do Next.js com a pasta [id], ler params com await, gerar metadados por rota com generateMetadata e disparar o 404 com notFound().">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
+<div class="pager"></div>
+<h1>Rotas dinâmicas <code>[id]</code></h1>
+<p class="intro">A Ana 👩‍💻 tinha um blog estático: uma página para cada post, escrita na mão. Quando o blog ganhou 50 posts, criar página nova virou um trabalho braçal. A solução dela foi uma <strong>pasta com colchetes</strong> — <code>app/blog/[id]/page.jsx</code> — que atende <em>qualquer</em> post. Nesta página você vai construir exatamente isso.</p>
+<div class="note"><strong>Você vai aprender</strong><ul><li>Por que a pasta <code>[id]</code> vira uma rota curinga (ex: <code>/blog/42</code>)</li><li>Como ler o valor do segmento com <code>await params</code> no Next.js 15</li><li>Gerar título e descrição por rota com <code>generateMetadata</code></li><li>Disparar o 404 com <code>notFound()</code></li></ul></div>
+<hr><h2>A ideia: a gaveta etiquetada "nº ___"</h2>
+<p>Imagine o arquivo de uma repartição pública. Existe uma gaveta física para cada número? Não — existe <strong>uma gaveta por andar</strong>, etiquetada "documento nº ___", e o número é preenchido na hora em que alguém pede. A pasta <code>[id]</code> funciona exatamente assim: o <code>[id]</code> é um espaço em branco no endereço. Quando o navegador pede <code>/blog/42</code>, o Next.js preenche o espaço em branco com <code>"42"</code> e entrega esse valor para a sua página dentro de um objeto chamado <code>params</code>.</p>
+<p>O detalhe esperto é que <strong>uma única página atende infinitas URLs</strong>. Você não escreve 50 arquivos; escreve um único arquivo que sabe ler a etiqueta da gaveta e buscar o post correspondente no banco. A rota continua existindo de verdade — <code>/blog/42</code> e <code>/blog/99</code> são endereços distintos, com SEO próprio — mas o código que as renderiza é só um.</p>
+<p>E por que o valor chega dentro de uma <em>Promise</em> (por isso o <code>await</code>)? Porque no Next.js 15 o <code>params</code> é assíncrono de propósito: a framework pode esperar os dados chegarem antes de decidir como renderizar, o que habilita streaming e páginas parciais. A regra prática é simples: <strong>no App Router moderno, sempre faça <code>const { id } = await params;</code></strong> no começo da página.</p>
+<h2>Montando a rota dinâmica</h2>
+<p>Crie a pasta <code>app/blog/[id]/</code> e dentro dela o arquivo <code>page.jsx</code>. O nome da pasta entre colchetes é o nome da chave que chega em <code>params</code>. Se a pasta fosse <code>[slug]</code>, você receberia <code>params.slug</code>. Pode haver vários segmentos dinâmicos na mesma rota: <code>app/loja/[categoria]/[produto]/page.jsx</code> recebe <code>params.categoria</code> e <code>params.produto</code>.</p>
+<pre class="file" data-file="app/blog/[id]/page.jsx">import { notFound } from "next/navigation";
+
+async function getPost(id) {
+  // no mundo real: busca no banco de dados
+  const res = await fetch(`https://api.exemplo.com/posts/${id}`, {
+    next: { revalidate: 60 },
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export default async function BlogPostPage({ params }) {
+  // Next.js 15: params é uma Promise — sempre espere antes de usar
+  const { id } = await params; // /blog/42  ->  id === "42"
+
+  const post = await getPost(id);
+  if (!post) notFound(); // joga para o not-found.jsx mais próximo
+
+  return (
+    &lt;article&gt;
+      &lt;h1&gt;{post.titulo}&lt;/h1&gt;
+      &lt;p&gt;{post.conteudo}&lt;/p&gt;
+    &lt;/article&gt;
+  );
+}</pre>
+<p>Repare em três pontos: a página é <code>async</code> (Server Component assíncrono, padrão do App Router), o <code>params</code> é desempacotado com <code>await</code>, e o <code>notFound()</code> arremessa a requisição para o arquivo <code>not-found.jsx</code> mais próximo — falaremos dele na página de estados especiais.</p>
+<h2>Metadados por rota: generateMetadata</h2>
+<p>Toda rota pode ter o próprio <code>&lt;title&gt;</code> e descrição. Basta exportar uma função <code>generateMetadata</code> no mesmo arquivo da página. Ela recebe os mesmos <code>params</code> — também com <code>await</code> — e você usa o <code>id</code> para montar um título único por post, o que é ouro para SEO:</p>
+<pre class="file" data-file="app/blog/[id]/page.jsx (trecho)">export async function generateMetadata({ params }) {
+  const { id } = await params;
+  const post = await getPost(id);
+  return {
+    title: post ? `${post.titulo} | Blog da Ana` : "Post não encontrado",
+    description: post?.resumo,
+  };
+}</pre>
+<table class="ref">
+<tr><th>Convenção</th><th>Exemplo de URL</th><th>O que chega em <code>params</code></th></tr>
+<tr><td><code>app/blog/[id]/page.jsx</code></td><td><code>/blog/42</code></td><td><code>{ id: "42" }</code></td></tr>
+<tr><td><code>app/loja/[cat]/[prod]/page.jsx</code></td><td><code>/loja/calcados/tenis-90</code></td><td><code>{ cat: "calcados", prod: "tenis-90" }</code></td></tr>
+<tr><td><code>page.jsx</code> recebe também <code>searchParams</code></td><td><code>/blog?pagina=2</code></td><td><code>searchParams.pagina === "2"</code> (também com <code>await</code>)</td></tr>
+<tr><td><code>generateMetadata({ params })</code></td><td>—</td><td>retorna <code>{ title, description }</code> por rota</td></tr>
+<tr><td><code>notFound()</code></td><td>—</td><td>renderiza o <code>not-found.jsx</code> mais próximo com status 404</td></tr>
+</table>
+<div class="tryreact" data-goal="find\("><p class="try-task"><strong>Missão:</strong> o Blog da Ana tem uma lista de posts e um "id selecionado". Complete a função <code>postSelecionado</code> para devolver o post cujo <code>id</code> bate com o selecionado (use <code>posts.find(...)</code>). Depois clique em um post e rode — o detalhe deve aparecer.</p><pre class="script" data-file="App.jsx">function App() {
+  const posts = [
+    { id: "1", titulo: "Primeiro post", texto: "Olá, mundo!" },
+    { id: "2", titulo: "Rotas no Next", texto: "[id] é um curinga." },
+    { id: "3", titulo: "Server Actions", texto: "Form sem JavaScript." },
+  ];
+  const [selecionado, setSelecionado] = React.useState("1");
+
+  // 👉 complete aqui: devolva o post cujo id é `selecionado`
+  const postSelecionado = null;
+
+  return (
+    &lt;div style={{ fontFamily: "sans-serif", padding: 16 }}&gt;
+      &lt;ul&gt;
+        {posts.map((p) =&gt; (
+          &lt;li key={p.id}&gt;
+            &lt;a href="#" onClick={(e) =&gt; { e.preventDefault(); setSelecionado(p.id); }}&gt;
+              {p.titulo}
+            &lt;/a&gt;
+          &lt;/li&gt;
+        ))}
+      &lt;/ul&gt;
+      &lt;hr /&gt;
+      {postSelecionado
+        ? &lt;div&gt;&lt;h2&gt;{postSelecionado.titulo}&lt;/h2&gt;&lt;p&gt;{postSelecionado.texto}&lt;/p&gt;&lt;/div&gt;
+        : &lt;p&gt;Nenhum post selecionado&lt;/p&gt;}
+    &lt;/div&gt;
+  );
+}</pre><pre class="solucao" data-file="App.jsx">function App() {
+  const posts = [
+    { id: "1", titulo: "Primeiro post", texto: "Olá, mundo!" },
+    { id: "2", titulo: "Rotas no Next", texto: "[id] é um curinga." },
+    { id: "3", titulo: "Server Actions", texto: "Form sem JavaScript." },
+  ];
+  const [selecionado, setSelecionado] = React.useState("1");
+
+  // a "gaveta etiquetada": acha o post pela etiqueta (id)
+  const postSelecionado = posts.find((p) => p.id === selecionado);
+
+  return (
+    &lt;div style={{ fontFamily: "sans-serif", padding: 16 }}&gt;
+      &lt;ul&gt;
+        {posts.map((p) =&gt; (
+          &lt;li key={p.id}&gt;
+            &lt;a href="#" onClick={(e) =&gt; { e.preventDefault(); setSelecionado(p.id); }}&gt;
+              {p.titulo}
+            &lt;/a&gt;
+          &lt;/li&gt;
+        ))}
+      &lt;/ul&gt;
+      &lt;hr /&gt;
+      {postSelecionado
+        ? &lt;div&gt;&lt;h2&gt;{postSelecionado.titulo}&lt;/h2&gt;&lt;p&gt;{postSelecionado.texto}&lt;/p&gt;&lt;/div&gt;
+        : &lt;p&gt;Nenhum post selecionado&lt;/p&gt;}
+    &lt;/div&gt;
+  );
+}</pre></div>
+<figure class="tela"><img src="assets/telas/rotas-dinamicas.png" alt="Página dinâmica /blog/42 renderizando um post, com o código de app/blog/[id]/page.jsx ao lado" width="1280" height="800" loading="lazy"><figcaption>A mesma página <code>app/blog/[id]/page.jsx</code> servindo <code>/blog/42</code> e devolvendo 404 para <code>/blog/99</code> quando o post não existe.</figcaption></figure>
+<h2>Quando dá errado</h2>
+<div class="warning"><strong>Erro:</strong> inesquecer o <code>await</code> no <code>params</code>. No Next.js 15, usar <code>params.id</code> direto acusa na hora — a mensagem real aparece no terminal e na página de erro do dev:</div>
+<pre class="out">Error: Route "/blog/[id]" used `params.id`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis</pre>
+<p>Tradução: a rota usou <code>params.id</code> sem esperar. <strong>Correção:</strong> declare a página como <code>async</code> e faça <code>const { id } = await params;</code> antes de qualquer uso. Outro erro clássico: nomear a pasta <code>app/blog/id/page.jsx</code> (sem colchetes) achando que é dinâmico — sem <code>[]</code> a pasta vira uma rota literal chamada <code>/blog/id</code>.</p>
+<h2>Exercícios</h2>
+<div class="mc" data-answer="2"><p class="mc-q">1. Qual pasta cria uma rota que aceita qualquer valor em <code>/produto/…</code>?</p><label><input type="radio">app/produto/id/page.jsx</label><label><input type="radio">app/produto/[id]/page.jsx</label><label><input type="radio">app/produto/*/page.jsx</label><label><input type="radio">app/produto/:id/page.jsx</label><p class="mc-feedback"></p></div>
+<div class="mc" data-answer="1"><p class="mc-q">2. No Next.js 15, como se lê o segmento dinâmico dentro da página?</p><label><input type="radio">const { id } = await params;</label><label><input type="radio">const { id } = params;</label><label><input type="radio">const id = use(params);</label><label><input type="radio">const { id } = props.params;</label><p class="mc-feedback"></p></div>
+<div class="exercise" data-answer="notFound();"><p><strong>3. Complete o comando:</strong> para mandar a rota para a página de 404 quando o post não existe, escreva a chamada de função dentro do <code>if (!post)</code>:</p><div class="ex-code"><input class="ex-input" type="text" placeholder="escreva aqui…" style="width:100%"></div><div class="ex-actions"><button type="button">Verificar</button></div><p class="ex-result"></p></div>
+<div class="pager"></div></div></main></div><script src="assets/site.js"></script></body></html>

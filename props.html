@@ -1,0 +1,95 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Props entre componentes | Guia Next.js</title><meta name="description" content="Aprenda a passar props entre componentes no Next.js: sintaxe nome={valor}, desestruturação no componente filho, props entre Server e Client Components (só valores serializáveis) e o erro real de passar função de servidor para client.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
+<div class="pager"></div>
+<h1>Props</h1>
+<p class="intro">O componente <code>&lt;Header /&gt;</code> da Ana está igual em todas as páginas — mas e se ela quiser que o título da página mude ("Início", "Sobre")? É aí que entram as <strong>props</strong>: valores que o componente pai passa para o filho, como argumentos de uma função. Nesta página você vai aprender a sintaxe e a regra de ouro entre Server e Client Components.</p>
+<div class="note"><strong>Você vai aprender</strong><ul><li>Sintaxe: <code>&lt;Saudacao nome="Ana" /&gt;</code> no pai, <code>{ nome }</code> no filho</li><li>Desestruturação: <code>function Saudacao({ nome, idade })</code></li><li>Props com valor JS: aspas para texto, chaves para número/expressão: <code>idade={20}</code></li><li>Props entre Server → Client: só valores serializáveis (texto, número, objeto, array)</li><li>❌ Server não pode passar função para Client (erro real)</li><li>Props só descem (pai → filho); o filho não altera as props</li></ul></div>
+<hr><h2>A ideia: props são bilhetes que o pai cola na mão do filho</h2>
+<p>Imagine que a Ana (o componente <em>pai</em>) vai mandar o filho (o componente <em>filho</em>) numa tarefa: "leva esse bilhete para a padaria". O bilhete é a <strong>prop</strong>: um valor que o pai entrega para o filho usar. No código, o pai escreve <code>&lt;Saudacao nome="Ana" /&gt;</code> — como se colocasse um bilhetinho escrito <code>nome: "Ana"</code> na mão do componente <code>Saudacao</code>. Dentro do filho, a função recebe esse bilhete desempacotado: <code>function Saudacao({ nome })</code> — e usa <code>{nome}</code> no JSX. Simples assim: <strong>o pai manda, o filho recebe e usa</strong>.</p>
+<p>Tem uma regrinha de sintaxe importante: texto vai entre aspas (<code>nome="Ana"</code>), mas número, variável ou expressão vai entre chaves (<code>idade={20}</code>, <code>ano={2025}</code>, <code>dobro={n * 2}</code>). As chaves são a janelinha do JSX de novo — tudo que é JavaScript entra nelas.</p>
+<p>E a regra de ouro entre Server e Client: quando um <strong>Server Component manda props para um Client Component</strong>, esses valores atravessam a "fronteira" entre servidor e navegador — eles viram JSON no meio do caminho. Então só dá para passar o que existe em JSON: <strong>string, número, booleano, null, array e objeto</strong>. <strong>Função não existe em JSON</strong>, então passar um <code>onClick={minhaFuncao}</code> de um Server Component para um Client Component dá erro. (Client → Client pode passar função à vontade.)</p>
+<figure class="tela"><img src="assets/telas/props.png" alt="Diagrama: componente Pai passando nome=Ana e nome=Bruno por setas para o componente Filho Saudacao, que renderiza Olá, Ana! e Olá, Bruno!" width="1280" height="800" loading="lazy"><figcaption>O mesmo componente <code>Saudacao</code> renderizando duas vezes com props diferentes — é o poder da reutilização.</figcaption></figure>
+<h2>Exemplo completo: Saudacao</h2>
+<pre class="file" data-file="components/Saudacao.jsx">// O filho: recebe as props desempacotadas no parâmetro
+export default function Saudacao({ nome, idade }) {
+  return (
+    &lt;div&gt;
+      &lt;h1&gt;Olá, {nome}!&lt;/h1&gt;
+      &lt;p&gt;Você tem {idade} anos.&lt;/p&gt;
+    &lt;/div&gt;
+  );
+}</pre>
+<pre class="file" data-file="app/page.jsx">import Saudacao from "../components/Saudacao";
+
+export default function Home() {
+  return (
+    &lt;main&gt;
+      &lt;Saudacao nome="Ana" idade={20} /&gt;
+      &lt;Saudacao nome="Bruno" idade={31} /&gt;
+    &lt;/main&gt;
+  );
+}</pre>
+<p>Resultado na tela: <strong>Olá, Ana! Você tem 20 anos.</strong> e <strong>Olá, Bruno! Você tem 31 anos.</strong> — mesmo componente, dados diferentes. Repare: <code>nome="Ana"</code> (texto, com aspas) e <code>idade={20}</code> (número, com chaves).</p>
+<div class="tryreact" data-goal="nome"><p class="try-task"><strong>Missão:</strong> crie um componente <code>Saudacao</code> que recebe a prop <code>nome</code> e mostre <code>&lt;Saudacao nome="Ana" /&gt;</code> no App. Aperte ▶ Rodar.</p><pre class="script" data-file="App.jsx">export default function App() {
+  return (
+    &lt;main&gt;
+      &lt;p&gt;crie o componente Saudacao aqui&lt;/p&gt;
+    &lt;/main&gt;
+  );
+}</pre><pre class="solucao" data-file="App.jsx">function Saudacao({ nome }) {
+  return &lt;h1&gt;Olá, {nome}!&lt;/h1&gt;;
+}
+
+export default function App() {
+  return (
+    &lt;main&gt;
+      &lt;Saudacao nome="Ana" /&gt;
+    &lt;/main&gt;
+  );
+}</pre></div>
+<div class="table-wrap"><table class="ref"><tr><th>No pai (quem usa)</th><th>Tipo do valor</th><th>No filho (quem recebe)</th></tr><tr><td><code>nome="Ana"</code></td><td>texto (string)</td><td><code>{ nome }</code></td></tr><tr><td><code>idade={20}</code></td><td>número</td><td><code>{ idade }</code></td></tr><tr><td><code>dobro={n * 2}</code></td><td>expressão JS</td><td>qualquer valor</td></tr><tr><td><code>ativo={true}</code></td><td>booleano</td><td><code>{ ativo }</code></td></tr><tr><td><code>itens={["a","b"]}</code></td><td>array/objeto (serializável)</td><td>✅ Server → Client pode</td></tr><tr><td><code>onClick={fn}</code></td><td>função</td><td>❌ Server → Client NÃO pode (só Client → Client)</td></tr></table></div>
+<h2>Props entre Server e Client na prática</h2>
+<pre class="file" data-file="app/page.jsx">// Server Component (padrão)
+import Contador from "../components/Contador"; // ← esse tem "use client"
+
+export default function Home() {
+  return (
+    &lt;main&gt;
+      &lt;h1&gt;Página server&lt;/h1&gt;
+      {/* props serializáveis passam tranquilo: */}
+      &lt;Contador titulo="Cliques" valorInicial={10} /&gt;
+    &lt;/main&gt;
+  );
+}</pre>
+<pre class="file" data-file="components/Contador.jsx">"use client";
+
+import { useState } from "react";
+
+export default function Contador({ titulo, valorInicial }) {
+  const [n, setN] = useState(valorInicial);
+  return &lt;button onClick={() =&gt; setN(n + 1)}&gt;{titulo}: {n}&lt;/button&gt;;
+}</pre>
+<h2>Quando dá errado</h2>
+<div class="warning"><strong>Erro 1:</strong> o Server Component tentou passar uma função para um Client Component:</div>
+<pre class="out">Error: Functions cannot be passed directly to Client Components unless you
+explicitly expose it by marking it with "use server".
+  &lt;Contador onClique={() =&gt; ...} /&gt;
+
+Dica do guia: de Server para Client só passam valores serializáveis
+(string, número, objeto, array). Funções só entre Client → Client
+(ou via Server Actions, que é assunto do Nível 2).</pre>
+<div class="warning"><strong>Erro 2:</strong> esqueceu as chaves no valor numérico e passou string:</div>
+<pre class="out">&lt;Saudacao idade="20" /&gt;  → idade chega como texto "20"
+&lt;Saudacao idade={20} /&gt;    → idade chega como número 20
+
+Dica do guia: texto usa aspas, código JavaScript usa chaves.
+Se precisar de conta (idade + 1), passe número: idade={20}.</pre>
+<h2>Exercícios</h2>
+<div class="mc" data-answer="2"><p class="mc-q">1. Como o pai passa a prop <code>nome</code> com valor "Ana" para um componente?</p><label><input type="radio" name="q1">&lt;Saudacao nome:Ana /&gt;</label><label><input type="radio" name="q1">&lt;Saudacao nome="Ana" /&gt;</label><label><input type="radio" name="q1">&lt;Saudacao nome={Ana} /&gt; (sem aspas no Ana)</label><label><input type="radio" name="q1">prop nome="Ana"</label><p class="mc-feedback"></p></div>
+<div class="mc" data-answer="4"><p class="mc-q">2. Como o filho recebe e usa a prop <code>nome</code>?</p><label><input type="radio" name="q2">props.nome</label><label><input type="radio" name="q2">{props["nome"]}</label><label><input type="radio" name="q2">this.nome</label><label><input type="radio" name="q2">desestrutura no parâmetro: function Saudacao({ nome }) e usa {nome}</label><p class="mc-feedback"></p></div>
+<div class="mc" data-answer="3"><p class="mc-q">3. O que um Server Component pode passar como prop para um Client Component?</p><label><input type="radio" name="q3">Funções e eventos prontos</label><label><input type="radio" name="q3">Variáveis do servidor em memória</label><label><input type="radio" name="q3">Só valores serializáveis (string, número, booleano, objeto, array)</label><label><input type="radio" name="q3">O banco de dados inteiro</label><p class="mc-feedback"></p></div>
+<div class="exercise" data-answer="nome={"><h2>Exercício 1</h2><p>Complete a sintaxe para passar um valor de número/expressão como prop (sem aspas): <code>&lt;Saudacao idade=___ 20 /&gt;</code> — escreva o caractere que abre a expressão:</p><div class="ex-code"><input class="ex-input" type="text" placeholder="um caractere" style="width:100%"></div><div class="ex-actions"><button type="button">Verificar</button></div><p class="ex-result"></p></div>
+<div class="pager"></div></div></main></div><script src="assets/site.js"></script></body></html>

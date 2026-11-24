@@ -1,0 +1,94 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fetch em Server Component | Guia Next.js</title><meta name="description" content="Aprenda a buscar dados com fetch dentro de Server Components no Next.js: o cache automático, cache no-store, next.revalidate em segundos e next.tags, tudo rodando no servidor.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
+<div class="pager"></div>
+<h1>Fetch em Server Component</h1>
+<p class="intro">A Ana 👩‍💻 descobriu que, no App Router, ela <strong>não precisa mais de <code>useEffect</code> para buscar dados</strong>. A página dela é um Server Component: a função dela roda no servidor, faz <code>fetch</code> direto, e o navegador recebe só o HTML pronto. O JavaScript da busca nunca vai para o cliente. Nesta página você vai dominar esse fetch no servidor e o cache que vem de brinde.</p>
+<div class="note"><strong>Você vai aprender</strong><ul><li>Por que Server Component pode ser <code>async</code> e dar <code>await fetch</code> direto</li><li>O cache padrão do fetch no Next.js (Data Cache)</li><li><code>cache: "no-store"</code> para dados sempre frescos</li><li><code>next: { revalidate: 60 }</code> e <code>next: { tags: […] }</code></li><li>Dedupe automático: o mesmo fetch em vários componentes chama a API só uma vez</li></ul></div>
+<hr><h2>A ideia: a cozinha que busca o ingrediente vs. o garçom que anota o pedido</h2>
+<p>Num site antigo em React puro, o navegador (o garçom) pedia os dados para a API depois que a página já tinha carregado — por isso você via <code>useEffect</code>, <code>loading…</code> e um segundo de tela piscando. No App Router, quem vai à cozinha buscar o ingrediente é o <strong>cozinheiro</strong> (o servidor): a página é montada já com os dados na mão, e o garçom só entrega o prato pronto.</p>
+<p>E o cardápio? O Next.js estende o <code>fetch</code> padrão com um <strong>cache automático</strong>: se dez componentes pedirem a mesma URL na mesma renderização, a API só é chamada uma vez (isso se chama <em>request memoization</em>). E entre renderizações, o resultado fica guardado no Data Cache — por padrão, no modo estático, o fetch é cacheado "para sempre" até o próximo build; no modo dinâmico, vale enquanto durar a requisição.</p>
+<p>Você controla a validade com duas opções: <code>next: { revalidate: 60 }</code> guarda o resultado por 60 segundos (depois disso, a próxima visita busca de novo em segundo plano), e <code>next: { tags: ["posts"] }</code> dá uma <em>etiqueta</em> para o cache — aí basta chamar <code>revalidateTag("posts")</code> (veremos na próxima página) para invalidar tudo de uma vez. Para dados que nunca podem ficar velhos (ex: saldo bancário), use <code>cache: "no-store"</code>.</p>
+<h2>Buscando dados na página</h2>
+<pre class="file" data-file="app/page.jsx (Server Component — sem "use client")">export default async function Home() {
+  // roda NO SERVIDOR. A URL da API não aparece no navegador.
+  const res = await fetch("https://api.exemplo.com/posts", {
+    next: { revalidate: 60, tags: ["posts"] },
+  });
+  if (!res.ok) throw new Error("Falha ao carregar posts");
+  const posts = await res.json();
+
+  return (
+    &lt;ul&gt;
+      {posts.map((p) =&gt; (
+        &lt;li key={p.id}&gt;{p.titulo}&lt;/li&gt;
+      ))}
+    &lt;/ul&gt;
+  );
+}</pre>
+<h2>As três políticas de cache do fetch</h2>
+<pre class="file" data-file="exemplos de fetch no servidor">// 1. Cache por 60 segundos + etiqueta "posts"
+const res = await fetch(url, { next: { revalidate: 60, tags: ["posts"] } });
+
+// 2. Sempre fresco — nunca guarda em cache (padrão no modo dinâmico)
+const res = await fetch(url, { cache: "no-store" });
+
+// 3. Cache "para sempre" até o próximo build (padrão no modo estático)
+const res = await fetch(url); // ou { cache: "force-cache" }</pre>
+<p>Se o fetch falhar, o <code>throw new Error(...)</code> cai direto no <code>error.jsx</code> mais próximo — é por isso que a página de estados especiais existe. E se a resposta for 404, dá para chamar <code>notFound()</code> em vez de tratar na mão.</p>
+<table class="ref">
+<tr><th>Opção</th><th>Comportamento</th><th>Quando usar</th></tr>
+<tr><td><code>fetch(url)</code> (estático)</td><td>cacheia até o próximo build</td><td>conteúdo que muda só no deploy (blog, docs)</td></tr>
+<tr><td><code>{ cache: "no-store" }</code></td><td>sempre busca na API</td><td>dados pessoais/em tempo real (saldo, feed logado)</td></tr>
+<tr><td><code>{ next: { revalidate: 60 } }</code></td><td>guarda 60s; depois revalida em segundo plano</td><td>notícias, cotações, listas que mudam aos poucos</td></tr>
+<tr><td><code>{ next: { tags: ["posts"] } }</code></td><td>cache marcado com etiqueta</td><td>junto com <code>revalidateTag("posts")</code> após mutações</td></tr>
+<tr><td>mesmo fetch em N componentes</td><td>API chamada 1x por renderização (memoization)</td><td>automático — só funciona dentro do mesmo request</td></tr>
+</table>
+<div class="tryreact" data-goal="useEffect|fetch\("><p class="try-task"><strong>Missão:</strong> a Ana fazia a busca no navegador com <code>useEffect</code> e via "carregando…" piscando. Simule a versão <em>nova</em>: no Server Component os dados já chegam prontos. Complete o componente <code>Post</code> para receber <code>post</code> por <em>prop</em> (sem fetch dentro) e renderizar o título — o App já "busca" os dados antes.</p><pre class="script" data-file="App.jsx">// no servidor (App Router): const posts = await fetch(...).json()
+// aqui já chegamos com os dados prontos:
+const posts = [
+  { id: "1", titulo: "Post já chegou pronto do servidor ✔" },
+];
+
+function Post(/* 👉 recebe o post por aqui */) {
+  // 👉 renderize o título do post recebido
+  return null;
+}
+
+function App() {
+  return (
+    &lt;ul&gt;
+      {posts.map((p) =&gt; (
+        &lt;li key={p.id}&gt;&lt;Post post={p} /&gt;&lt;/li&gt;
+      ))}
+    &lt;/ul&gt;
+  );
+}</pre><pre class="solucao" data-file="App.jsx">const posts = [
+  { id: "1", titulo: "Post já chegou pronto do servidor ✔" },
+];
+
+function Post({ post }) {
+  return &lt;span&gt;{post.titulo}&lt;/span&gt;;
+}
+
+function App() {
+  return (
+    &lt;ul&gt;
+      {posts.map((p) =&gt; (
+        &lt;li key={p.id}&gt;&lt;Post post={p} /&gt;&lt;/li&gt;
+      ))}
+    &lt;/ul&gt;
+  );
+}</pre></div>
+<figure class="tela"><img src="assets/telas/fetch-server-component.png" alt="Página no servidor fazendo fetch com revalidate 60 e o terminal mostrando a segunda requisição atendida pelo cache" width="1280" height="800" loading="lazy"><figcaption>A 1ª visita busca na API (210ms); a 2ª, dentro dos 60s, vem do cache (4ms); passados 60s, o Next.js revalida em segundo plano.</figcaption></figure>
+<h2>Quando dá errado</h2>
+<div class="warning"><strong>Erro:</strong> tentar dar <code>fetch</code> com <code>useEffect</code> dentro de um Server Component — ou confundir os dois mundos:</div>
+<pre class="out">Error: useEffect is not supported in Server Components. You likely forgot "use client" — or the data can be fetched directly in the Server Component with await fetch().</pre>
+<p>Tradução: <code>useEffect</code> não existe em Server Component. Se a página não precisa de interatividade, <strong>faça o fetch direto com <code>await</code></strong> (como nesta página); se precisar dos dois (dados + estado no cliente), busque no servidor e passe o resultado por props para um Client Component filho. Outro erro clássico: <code>fetch</code> numa rota estática sem cache explícito achando que vai ser dinâmico — no modo estático o resultado fica preso até o próximo build.</p>
+<h2>Exercícios</h2>
+<div class="mc" data-answer="3"><p class="mc-q">1. O que faz <code>fetch(url, { next: { revalidate: 60 } })</code>?</p><label><input type="radio">Bloqueia a página por 60 segundos</label><label><input type="radio">Apaga o cache para sempre</label><label><input type="radio">Guarda a resposta em cache por 60s; depois revalida em segundo plano</label><label><input type="radio">Manda 60 requisições paralelas</label><p class="mc-feedback"></p></div>
+<div class="mc" data-answer="1"><p class="mc-q">2. Para dados que nunca podem ficar em cache (ex: saldo da conta), qual opção usar?</p><label><input type="radio"><code>{ cache: "no-store" }</code></label><label><input type="radio"><code>{ next: { revalidate: 0 } }</code></label><label><input type="radio"><code>{ cache: "force-cache" }</code></label><label><input type="radio">Não existe essa opção</label><p class="mc-feedback"></p></div>
+<div class="exercise" data-regex="next:\s*\{\s*tags:\s*\[.posts.\]\s*\}"><p><strong>3. Complete:</strong> para dar a etiqueta <code>"posts"</code> ao cache de um fetch (para invalidar depois com <code>revalidateTag</code>), qual opção você passa?</p><div class="ex-code"><input class="ex-input" type="text" placeholder="escreva aqui…" style="width:100%"></div><div class="ex-actions"><button type="button">Verificar</button></div><p class="ex-result"></p></div>
+<div class="pager"></div></div></main></div><script src="assets/site.js"></script></body></html>

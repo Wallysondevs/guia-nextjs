@@ -1,0 +1,101 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catch-all [...slug] | Guia Next.js</title><meta name="description" content="Entenda as rotas catch-all do Next.js: [...slug] captura vários segmentos de URL de uma vez e [[...slug]] torna o catch-all opcional, permitindo que a raiz também funcione.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
+<div class="pager"></div>
+<h1>Catch-all <code>[...slug]</code></h1>
+<p class="intro">A Ana 👩‍💻 documentou o projeto dela em pastas aninhadas: <code>/docs/instalacao/rapida</code>, <code>/docs/rotas/dinamicas</code>, <code>/docs/api/route</code>… Criar uma página para cada combinação seria um pesadelo. A saída foi o <strong>catch-all</strong>: uma pasta <code>[...slug]</code> que "pega tudo" o que vier depois, como um aspirador de URL.</p>
+<div class="note"><strong>Você vai aprender</strong><ul><li>A diferença entre <code>[id]</code> (um segmento) e <code>[...slug]</code> (vários segmentos)</li><li>Como <code>params.slug</code> vira um <em>array</em> de strings</li><li>O catch-all opcional <code>[[...slug]]</code> — por que <code>/docs</code> também funciona</li><li>Montar breadcrumbs a partir do slug</li></ul></div>
+<hr><h2>A ideia: o aspirador de URLs</h2>
+<p>Pense numa rota dinâmica comum, <code>/blog/[id]</code>: ela captura <strong>exatamente um</strong> pedaço da URL — <code>/blog/42</code> funciona, mas <code>/blog/2025/abril</code> não. Já o catch-all <code>[...slug]</code> é como um aspirador ligado na ponta da URL: tudo o que vier depois do prefixo ele engole de uma vez e entrega como uma <strong>lista</strong>. Em <code>/docs/a/b/c</code>, o aspirador devolve <code>["a", "b", "c"]</code>.</p>
+<p>Essa lista é a chave de tudo: com ela você monta breadcrumbs ("docs / a / b / c"), acha o arquivo certo num sistema de docs estilo wiki, ou valida cada nível. O nome <code>slug</code> é só tradição — pode ser <code>[...caminho]</code>, <code>[...partes]</code>, o que fizer sentido no seu projeto.</p>
+<p>Existe ainda a versão <strong>opcional</strong>, com colchetes duplos: <code>[[...slug]]</code>. Ela é o aspirador que também deixa o caminho vazio passar — ou seja, <code>/docs</code> (sem nada depois) também cai nessa página, com <code>slug = []</code>. É a diferença entre "precisa ter pelo menos um item" e "pode ser vazio".</p>
+<h2>Na prática: documentação em uma página só</h2>
+<p>Crie <code>app/docs/[...slug]/page.jsx</code>. O <code>params.slug</code> chega como array de strings — lembre-se do <code>await</code>:</p>
+<pre class="file" data-file="app/docs/[...slug]/page.jsx">import Link from "next/link";
+import { notFound } from "next/navigation";
+
+async function getDoc(slug) {
+  // no mundo real: lê o arquivo docs/&lt;slug.join("/")&gt;.md
+  const chave = slug.join("/");
+  const docs = { "instalacao/rapida": "Instale com npm…", "rotas/dinamicas": "Use [id]…" };
+  return docs[chave] ?? null;
+}
+
+export default async function DocPage({ params }) {
+  const { slug } = await params; // /docs/a/b/c -> ["a","b","c"]
+
+  const conteudo = await getDoc(slug);
+  if (!conteudo) notFound();
+
+  return (
+    &lt;main&gt;
+      &lt;nav&gt;
+        &lt;Link href="/docs"&gt;docs&lt;/Link&gt;
+        {slug.map((parte, i) =&gt; (
+          &lt;span key={i}&gt;
+            {" / "}
+            &lt;Link href={`/docs/${slug.slice(0, i + 1).join("/")}`}&gt;{parte}&lt;/Link&gt;
+          &lt;/span&gt;
+        ))}
+      &lt;/nav&gt;
+      &lt;h1&gt;Capítulo: {slug.at(-1)}&lt;/h1&gt;
+      &lt;p&gt;{conteudo}&lt;/p&gt;
+    &lt;/main&gt;
+  );
+}</pre>
+<h2>Catch-all opcional: <code>[[...slug]]</code></h2>
+<p>Se a Ana quer que <code>/docs</code> (a home da documentação) também seja atendida pela mesma página, basta trocar para <code>app/docs/[[...slug]]/page.jsx</code>. Aí <code>slug</code> pode ser <code>[]</code>, e o <code>slug.at(-1)</code> acima daria <code>undefined</code> — então vale tratar o caso vazio:</p>
+<pre class="file" data-file="app/docs/[[...slug]]/page.jsx (trecho)">export default async function DocPage({ params }) {
+  const { slug } = await params; // /docs -> [] ; /docs/a -> ["a"]
+  if (slug.length === 0) {
+    return &lt;h1&gt;Documentação — escolha um capítulo&lt;/h1&gt;;
+  }
+  // … resto igual
+}</pre>
+<table class="ref">
+<tr><th>Convenção</th><th>URL atendida</th><th><code>params</code> resultante</th></tr>
+<tr><td><code>app/docs/[...slug]/page.jsx</code></td><td><code>/docs/a</code>, <code>/docs/a/b/c</code></td><td><code>slug: ["a"]</code>, <code>slug: ["a","b","c"]</code></td></tr>
+<tr><td><code>app/docs/[...slug]/page.jsx</code></td><td><code>/docs</code> ❌ (404)</td><td>—</td></tr>
+<tr><td><code>app/docs/[[...slug]]/page.jsx</code></td><td><code>/docs</code> ✔ e <code>/docs/a/b</code> ✔</td><td><code>slug: []</code>, <code>slug: ["a","b"]</code></td></tr>
+<tr><td><code>app/[...slug]/page.jsx</code> (na raiz)</td><td>qualquer URL de vários níveis</td><td>lista completa do caminho</td></tr>
+</table>
+<div class="tryreact" data-goal="join\("><p class="try-task"><strong>Missão:</strong> simulando o catch-all: dada a lista <code>slug = ["docs","rotas","dinamicas"]</code>, monte o breadcrumb "docs / rotas / dinamicas" usando <code>slug.join(" / ")</code> e mostre o último capítulo com <code>slug.at(-1)</code>. Rode e confira.</p><pre class="script" data-file="App.jsx">function App() {
+  // como se a URL fosse /docs/rotas/dinamicas
+  const slug = ["docs", "rotas", "dinamicas"];
+
+  // 👉 complete: breadcrumb e título do capítulo
+  const breadcrumb = "";
+  const capitulo = "";
+
+  return (
+    &lt;div style={{ fontFamily: "sans-serif", padding: 16 }}&gt;
+      &lt;nav style={{ color: "#666" }}&gt;{breadcrumb}&lt;/nav&gt;
+      &lt;h2&gt;Capítulo: {capitulo}&lt;/h2&gt;
+    &lt;/div&gt;
+  );
+}</pre><pre class="solucao" data-file="App.jsx">function App() {
+  const slug = ["docs", "rotas", "dinamicas"];
+
+  const breadcrumb = slug.join(" / ");
+  const capitulo = slug.at(-1);
+
+  return (
+    &lt;div style={{ fontFamily: "sans-serif", padding: 16 }}&gt;
+      &lt;nav style={{ color: "#666" }}&gt;{breadcrumb}&lt;/nav&gt;
+      &lt;h2&gt;Capítulo: {capitulo}&lt;/h2&gt;
+    &lt;/div&gt;
+  );
+}</pre></div>
+<figure class="tela"><img src="assets/telas/catch-all.png" alt="Página de documentação com catch-all [...slug] mostrando breadcrumb docs / instalacao / rapida" width="1280" height="800" loading="lazy"><figcaption>Com <code>[[...slug]]</code>, tanto <code>/docs</code> quanto <code>/docs/instalacao/rapida</code> caem na mesma página — o <code>slug</code> chega como array.</figcaption></figure>
+<h2>Quando dá errado</h2>
+<div class="warning"><strong>Erro:</strong> tratar <code>slug</code> como string. É comum, principalmente quem vem de <code>[id]</code>, fazer <code>slug.toUpperCase()</code> ou <code>/docs/${slug}</code> achando que é texto — mas no catch-all ele é um <em>array</em>:</div>
+<pre class="out">TypeError: slug.toUpperCase is not a function
+    at DocPage (app/docs/[...slug]/page.jsx:12:19)</pre>
+<p>Tradução: <code>slug</code> não tem <code>toUpperCase</code> porque é um array, não uma string. <strong>Correção:</strong> use <code>slug.join("/")</code> quando precisar do caminho como texto, ou itere o array. Outro erro real: esquecer os colchetes triplos e escrever <code>[..slug]</code> — a pasta vira rota literal e nada funciona.</p>
+<h2>Exercícios</h2>
+<div class="mc" data-answer="3"><p class="mc-q">1. Com a rota <code>app/docs/[...slug]/page.jsx</code>, o que chega em <code>params.slug</code> na URL <code>/docs/a/b/c</code>?</p><label><input type="radio">"a/b/c" (uma string)</label><label><input type="radio">"abc"</label><label><input type="radio">["a", "b", "c"] (um array)</label><label><input type="radio">{ a: "b/c" }</label><p class="mc-feedback"></p></div>
+<div class="mc" data-answer="4"><p class="mc-q">2. Qual convenção faz <code>/docs</code> (sem nada depois) também ser atendida?</p><label><input type="radio">app/docs/[...slug]/page.jsx</label><label><input type="radio">app/docs/*/page.jsx</label><label><input type="radio">app/docs/[slug]/page.jsx</label><label><input type="radio">app/docs/[[...slug]]/page.jsx</label><p class="mc-feedback"></p></div>
+<div class="exercise" data-answer="slug.join('/')"><p><strong>3. Complete:</strong> para transformar o array <code>slug</code> no texto <code>"a/b/c"</code>, qual método você chama?</p><div class="ex-code"><input class="ex-input" type="text" placeholder="escreva aqui…" style="width:100%"></div><div class="ex-actions"><button type="button">Verificar</button></div><p class="ex-result"></p></div>
+<div class="pager"></div></div></main></div><script src="assets/site.js"></script></body></html>

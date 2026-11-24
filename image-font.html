@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Imagens e fontes: next/image e next/font | Guia Next.js</title>
+<meta name="description" content="next/image redimensiona, converte para WebP/AVIF, faz lazy loading e reserva espaço (zero CLS); next/font baixa a fonte no build e self-hosts. Veja sizes, priority, fill, remotePatterns e como trocar o <img> comum.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+<div class="pager"></div>
+<h1>Imagens e fontes: next/image e next/font</h1>
+<p class="intro">A Ana trocou todos os <code>&lt;img&gt;</code> do site por <code>&lt;Image&gt;</code> e as páginas pararam de "pular" ao carregar — porque a imagem já reserva o espaço. E trocou o <code>&lt;link&gt;</code> do Google Fonts por <code>next/font</code> e a fonte passou a vir do próprio servidor, sem bloquear a pintura. Nesta aula você aprende os dois.</p>
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li><code>next/image</code>: WebP/AVIF automático, lazy loading, <code>sizes</code>, <code>priority</code> (LCP) e <code>fill</code></li>
+<li>Por que <code>width</code>/<code>height</code> (ou <code>fill</code>) evitam o CLS (layout shift)</li>
+<li>Imagens externas: <code>images.remotePatterns</code> no <code>next.config.js</code></li>
+<li><code>next/font/google</code> e <code>next/font/local</code>: fonte self-hosted no build, com <code>variable</code> pro CSS</li>
+<li>Trocar <code>&lt;img&gt;</code> por <code>&lt;Image&gt;</code> passo a passo</li>
+</ul></div>
+<hr>
+<h2>A ideia: a padaria e a letra de mão</h2>
+<p>Uma imagem com <code>&lt;img&gt;</code> comum é como um <strong>pão embrulhado em jornal</strong>: o navegador não sabe o tamanho do pacote, então não reserva lugar na mesa — quando o pão chega, empurra todo o resto da refeição (é o <em>layout shift</em>, o famoso CLS ruim). O <code>&lt;Image&gt;</code> é o pão embalado com etiqueta de tamanho: o navegador reserva a fatia exata na mesa (width/height), e quando a imagem chega já cabe certinho, sem empurrar nada. Além disso, o Next.js reenvia a imagem no formato certo (WebP/AVIF, menor), no tamanho certo da tela (<code>sizes</code>) e só quando ela está perto de aparecer (lazy) — ou na hora, se for a imagem principal (<code>priority</code>).</p>
+<p>A fonte é a mesma história com outra metáfora: buscar a fonte no Google Fonts durante o carregamento é como <strong>escrever o cardápio à mão na hora do pedido</strong> — o texto aparece com a letra padrão feia até a "letra bonita" chegar (FOUT). O <code>next/font</code> baixa a fonte <strong>no momento do build</strong>, guarda no seu próprio servidor e entrega com <code>@font-face</code> local: zero requisição externa, zero pulo de letra, e ainda ganha <em>preload</em> automático. A Ana trocou a fonte e o Lighthouse parou de reclamar.</p>
+<h2>next/image na prática</h2>
+<pre class="file" data-file="app/galeria/page.jsx">import Image from 'next/image';
+
+export default function Galeria() {
+  return (
+    &lt;main&gt;
+      {/* 1) Imagem principal (acima da dobra): priority =&gt; carrega já, vira o LCP */}
+      &lt;Image
+        src="/foto-hero.jpg"
+        alt="Foto da Ana no ateliê"
+        width={1200}
+        height={600}
+        priority
+      /&gt;
+
+      {/* 2) Imagem que ocupa o container inteiro: fill + sizes */}
+      &lt;div style={{ position: 'relative', width: '100%', height: 300 }}&gt;
+        &lt;Image
+          src="/banner.jpg"
+          alt="Banner da loja"
+          fill
+          sizes="(max-width: 768px) 100vw, 1200px"
+          style={{ objectFit: 'cover' }}
+        /&gt;
+      &lt;/div&gt;
+
+      {/* 3) Imagem externa (precisa liberar o domínio no next.config) */}
+      &lt;Image
+        src="https://picsum.photos/600/400"
+        alt="Foto aleatória"
+        width={600}
+        height={400}
+      /&gt;
+    &lt;/main&gt;
+  );
+}</pre>
+<pre class="file" data-file="next.config.js">/** @type {import('next').NextConfig} */
+const nextConfig = {
+  images: {
+    remotePatterns: [
+      { protocol: 'https', hostname: 'picsum.photos' },
+      // ou solto: { hostname: '**.exemplo.com' }
+    ],
+  },
+};
+
+module.exports = nextConfig;</pre>
+<h2>next/font na prática</h2>
+<pre class="file" data-file="app/layout.jsx">import { Inter, Roboto_Mono } from 'next/font/google';
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',   // vira uma variável CSS
+  display: 'swap',
+});
+
+const mono = Roboto_Mono({ subsets: ['latin'], variable: '--font-mono' });
+
+export default function RootLayout({ children }) {
+  return (
+    &lt;html lang="pt-BR" className={`${inter.variable} ${mono.variable}`}&gt;
+      &lt;body&gt;{children}&lt;/body&gt;
+    &lt;/html&gt;
+  );
+}</pre>
+<pre class="file" data-file="app/globals.css">body {
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+code {
+  font-family: var(--font-mono), monospace;
+}</pre>
+<h2>Tabela rápida: img x Image</h2>
+<table class="ref"><thead><tr><th></th><th><code>&lt;img&gt;</code> comum</th><th><code>&lt;Image&gt;</code> do Next</th></tr></thead><tbody>
+<tr><td><strong>Tamanho na tela</strong></td><td>Carrega o arquivo original</td><td>Redimensiona e entrega no tamanho certo (<code>sizes</code>)</td></tr>
+<tr><td><strong>Formato</strong></td><td>JPG/PNG original</td><td>WebP/AVIF automático (menor)</td></tr>
+<tr><td><strong>Lazy loading</strong></td><td><code>loading="lazy"</code> manual</td><td>Automático (exceto <code>priority</code>)</td></tr>
+<tr><td><strong>Layout shift (CLS)</strong></td><td>Empurra o conteúdo se não tiver width/height</td><td>Reserva espaço sozinho (width/height ou fill)</td></tr>
+<tr><td><strong>Otimização de rota</strong></td><td>—</td><td><code>/_next/image?url=...&w=...&q=75</code></td></tr>
+</tbody></table>
+<div class="tryreact" data-goal="sizes="><p class="try-task"><strong>Missão:</strong> abaixo há um <code>&lt;img&gt;</code> comum (sem reserva de espaço — causa CLS). Troque por <code>&lt;Image&gt;</code> (já definido no topo como um <code>&lt;img&gt;</code> turbinado) com <code>width</code>, <code>height</code>, <code>alt</code> descritivo e <code>sizes</code>. Rode para ver a imagem renderizando igual, mas "com etiqueta de tamanho". Depois clique em <em>Verificar missão</em>.</p><pre class="script" data-file="App.jsx">// no Next.js de verdade: import Image from 'next/image';
+// aqui simulamos: o Image só repassa as props pro &lt;img&gt;
+function Image(p) { return &lt;img {...p} style={{ maxWidth: '100%', height: 'auto' }} /&gt;; }
+
+function App() {
+  return (
+    &lt;div&gt;
+      &lt;h1&gt;🖼️ Galeria&lt;/h1&gt;
+      {/* TODO: troque o &lt;img&gt; abaixo por:
+          &lt;Image src="https://picsum.photos/600/400" width={600} height={400}
+                 alt="Foto aleatória de paisagem" sizes="(max-width: 600px) 100vw, 600px" /&gt; */}
+      &lt;img src="https://picsum.photos/600/400" alt="" /&gt;
+    &lt;/div&gt;
+  );
+}</pre><pre class="solucao" data-file="App.jsx">function Image(p) { return &lt;img {...p} style={{ maxWidth: '100%', height: 'auto' }} /&gt;; }
+
+function App() {
+  return (
+    &lt;div&gt;
+      &lt;h1&gt;🖼️ Galeria&lt;/h1&gt;
+      &lt;Image src="https://picsum.photos/600/400" width={600} height={400}
+             alt="Foto aleatória de paisagem" sizes="(max-width: 600px) 100vw, 600px" /&gt;
+    &lt;/div&gt;
+  );
+}</pre></div>
+<figure class="tela"><img src="assets/telas/n3-image-font.png" alt="Galeria com next/image e fonte otimizada" width="1280" height="800" loading="lazy"><figcaption>Com next/image o espaço da foto já está reservado (sem pulo) e a fonte vem do próprio servidor via next/font.</figcaption></figure>
+<h2>Quando dá errado</h2>
+<div class="warning"><strong>Erro real:</strong> usar <code>&lt;Image&gt;</code> com <code>src</code> externo sem liberar o domínio. O otimizador recusa na hora:</div>
+<pre class="out">Error: Invalid src prop (https://picsum.photos/600/400) on `next/image`, hostname
+"picsum.photos" is not configured under images in your next.config.js
+→ adicione images.remotePatterns = [{ protocol: 'https', hostname: 'picsum.photos' }]</pre>
+<div class="warning"><strong>Outro clássico:</strong> <code>&lt;Image&gt;</code> sem <code>width</code>/<code>height</code> nem <code>fill</code>:</div>
+<pre class="out">Error: Image with src "/foto.jpg" is missing required "width" property.
+→ passe width e height (proporção original) OU use fill dentro de um container
+  com position: relative e altura definida.</pre>
+<div class="warning"><strong>E no build offline:</strong> o <code>next/font/google</code> baixa a fonte durante o <code>next build</code> — sem internet no servidor de build, o build falha. Solução: <code>next/font/local</code> com o arquivo .woff2 na pasta <code>public/fonts</code>.</div>
+<h2>Exercícios</h2>
+<div class="mc" data-answer="2"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">Por que o <code>&lt;Image&gt;</code> não causa layout shift (CLS)?</p><label><input type="radio" name="q1">Porque ele carrega mais rápido que o <code>&lt;img&gt;</code></label><label><input type="radio" name="q1">Porque o navegador reserva o espaço (width/height ou fill) antes de a imagem chegar</label><label><input type="radio" name="q1">Porque ele não usa JavaScript</label></div>
+<div class="mc" data-answer="1"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">A imagem principal, acima da dobra (a que conta para o LCP), deve usar:</p><label><input type="radio" name="q2"><code>priority</code> (carrega na hora, sem lazy)</label><label><input type="radio" name="q2"><code>lazy</code></label><label><input type="radio" name="q2"><code>sizes="100vw"</code> sempre</label></div>
+<div class="mc" data-answer="3"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">Para usar <code>&lt;Image src="https://picsum.photos/..."&gt;</code>, o que precisa no <code>next.config.js</code>?</p><label><input type="radio" name="q3">Nada, qualquer URL funciona</label><label><input type="radio" name="q3"><code>images: { domains: [...] }</code> (forma antiga)</label><label><input type="radio" name="q3"><code>images.remotePatterns</code> com o hostname liberado</label></div>
+<div class="exercise" data-answer="sizes"><p>Complete: para a imagem preencher o container, usa-se a prop <code>fill</code> e o container precisa de <code>position: relative</code>. Complete a prop que diz os tamanhos possíveis:</p><div class="ex-code">&lt;Image fill <input class="ex-input" autocomplete="off" spellcheck="false" autocapitalize="off">=&quot;(max-width: 768px) 100vw, 1200px&quot; /&gt;</div><div class="ex-actions"><button type="button">Verificar</button><span class="ex-result" aria-live="polite"></span></div></div>
+<div class="exercise" data-answer="next/font/google"><p>Complete a importação da fonte do Google no layout:</p><div class="ex-code">import { Inter } from '<input class="ex-input" autocomplete="off" spellcheck="false" autocapitalize="off">'</div><div class="ex-actions"><button type="button">Verificar</button><span class="ex-result" aria-live="polite"></span></div></div>
+<div class="pager"></div>
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

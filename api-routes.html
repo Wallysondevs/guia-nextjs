@@ -1,0 +1,126 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>API Routes (app/api/route.js) | Guia Next.js</title><meta name="description" content="Crie endpoints de API no próprio Next.js com Route Handlers: app/api/posts/route.js exportando GET, POST, PUT, DELETE, lendo NextRequest e devolvendo NextResponse.json com status.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
+<div class="pager"></div>
+<h1>API Routes: <code>app/api/…/route.js</code></h1>
+<p class="intro">A Ana 👩‍💻 precisava de um endpoint para o app de celular dela consumir os posts: <code>GET /api/posts</code> devolvia a lista, <code>POST /api/posts</code> criava um post novo. Em vez de subir um servidor separado, ela criou a API <strong>dentro do próprio projeto Next.js</strong>, na pasta <code>app/api/</code>, usando Route Handlers.</p>
+<div class="note"><strong>Você vai aprender</strong><ul><li>Criar <code>app/api/posts/route.js</code> com <code>GET</code>, <code>POST</code>, etc.</li><li>Ler query string e body com <code>NextRequest</code></li><li>Devolver JSON e status com <code>NextResponse.json(dados, { status })</code></li><li>Rotas dinâmicas na API: <code>app/api/posts/[id]/route.js</code></li><li>Quando usar API Route vs. Server Action</li></ul></div>
+<hr><h2>A ideia: a portaria do prédio que também atende interfone</h2>
+<p>O seu site Next.js já tem uma "portaria" — o servidor que responde às páginas. Uma API Route é simplesmente <strong>outra mesa nessa mesma portaria</strong>: em vez de devolver HTML, devolve JSON. O endereço <code>/api/posts</code> não é uma página, é um arquivo <code>route.js</code> que exporta funções nomeadas pelo método HTTP — <code>GET</code>, <code>POST</code>, <code>PUT</code>, <code>PATCH</code>, <code>DELETE</code>, <code>HEAD</code>, <code>OPTIONS</code>.</p>
+<p>Cada função recebe um <code>NextRequest</code> (o pedido, com URL, headers, cookies, body) e devolve um <code>Response</code> — e o Next.js já traz o primo turbinado, o <code>NextResponse</code>, com atalhos como <code>NextResponse.json()</code>, <code>NextResponse.redirect()</code> e acesso fácil a cookies. O contexto é o segundo argumento, que traz <code>params</code> nas rotas dinâmicas (também com <code>await</code> no Next 15).</p>
+<p>E quando usar API Route em vez de Server Action? Regra prática da Ana: <strong>Server Action é para formulários e mutações da própria página</strong> (ela já revalida o cache e redireciona sozinho); <strong>API Route é para ser consumida por fora</strong> — app mobile, outro site, um <code>curl</code> no terminal, um webhook.</p>
+<h2>Um CRUD de posts em dois arquivos</h2>
+<pre class="file" data-file="app/api/posts/route.js">import { NextResponse } from "next/server";
+
+// GET /api/posts?q=next  -> lista (com filtro opcional)
+export async function GET(request) {
+  const { searchParams } = new URL(request.url);
+  const q = searchParams.get("q") || "";
+  const posts = await buscarPosts(q); // filtra no banco
+  return NextResponse.json({ posts });
+}
+
+// POST /api/posts  body: { titulo, conteudo }
+export async function POST(request) {
+  const body = await request.json();
+  if (!body.titulo) {
+    return NextResponse.json(
+      { erro: "campo 'titulo' é obrigatório" },
+      { status: 400 }
+    );
+  }
+  const post = await criarPost(body);
+  return NextResponse.json(post, { status: 201 });
+}</pre>
+<pre class="file" data-file="app/api/posts/[id]/route.js">import { NextResponse } from "next/server";
+
+// GET /api/posts/42 -> um post só (ou 404)
+export async function GET(request, { params }) {
+  const { id } = await params;
+  const post = await buscarPost(id);
+  if (!post) {
+    return NextResponse.json({ erro: "não achei" }, { status: 404 });
+  }
+  return NextResponse.json(post);
+}
+
+// DELETE /api/posts/42 -> apaga
+export async function DELETE(request, { params }) {
+  const { id } = await params;
+  await apagarPost(id);
+  return new Response(null, { status: 204 }); // 204 = sem conteúdo
+}</pre>
+<p>Teste no terminal com <code>curl</code>:</p>
+<pre class="cmd" data-file="terminal">curl "http://localhost:3000/api/posts?q=next"
+# -> {"posts":[{"id":"1","titulo":"…"}]}
+
+curl -X POST http://localhost:3000/api/posts \
+  -H "Content-Type: application/json" \
+  -d '{"titulo":"Novo post"}'
+# -> 201 Created  {"id":"9","titulo":"Novo post"}</pre>
+<table class="ref">
+<tr><th>Peça</th><th>Como usa</th><th>Exemplo</th></tr>
+<tr><td>Query string</td><td><code>new URL(request.url).searchParams</code></td><td><code>/api/posts?q=next</code> → <code>searchParams.get("q")</code></td></tr>
+<tr><td>Body JSON</td><td><code>await request.json()</code></td><td>POST com <code>{ titulo }</code></td></tr>
+<tr><td>Headers/cookies do pedido</td><td><code>request.headers.get(...)</code>, <code>request.cookies</code></td><td>ler token de autorização</td></tr>
+<tr><td>Resposta JSON + status</td><td><code>NextResponse.json(dados, { status: 201 })</code></td><td>201 created, 400 bad request, 404…</td></tr>
+<tr><td>Sem conteúdo</td><td><code>new Response(null, { status: 204 })</code></td><td>DELETE bem-sucedido</td></tr>
+<tr><td>Params da rota</td><td>2º argumento: <code>{ params }</code> com <code>await</code></td><td><code>app/api/posts/[id]/route.js</code></td></tr>
+<tr><td>Cache da rota</td><td><code>export const dynamic = "force-dynamic"</code></td><td>rota que deve rodar sempre na hora</td></tr>
+</table>
+<div class="tryreact" data-goal="status|json|erro"><p class="try-task"><strong>Missão:</strong> simule uma mini API no navegador: a função <code>responder(pedido)</code> deve devolver <code>{ status: 404, body: { erro: "não achei" } }</code> quando o id não existe na lista, e <code>{ status: 200, body: post }</code> quando existe. Rode com os dois botões.</p><pre class="script" data-file="App.jsx">function App() {
+  const posts = [{ id: "1", titulo: "Só existe o post 1" }];
+  const [id, setId] = React.useState("1");
+  const [resposta, setResposta] = React.useState(null);
+
+  // 👉 simule o Route Handler GET /api/posts/[id]
+  function responder() {
+    const achei = null;
+    setResposta({ status: 0, body: {} });
+  }
+
+  return (
+    &lt;div style={{ fontFamily: "monospace", padding: 16 }}&gt;
+      &lt;button onClick={() => { setId("1"); setResposta(null); }}&gt;pedir id=1&lt;/button&gt;
+      &lt;button onClick={() => { setId("99"); setResposta(null); }}&gt;pedir id=99&lt;/button&gt;
+      &lt;button onClick={responder}&gt;GET /api/posts/{id}&lt;/button&gt;
+      {resposta && (
+        &lt;p&gt;HTTP {resposta.status} — {JSON.stringify(resposta.body)}&lt;/p&gt;
+      )}
+    &lt;/div&gt;
+  );
+}</pre><pre class="solucao" data-file="App.jsx">function App() {
+  const posts = [{ id: "1", titulo: "Só existe o post 1" }];
+  const [id, setId] = React.useState("1");
+  const [resposta, setResposta] = React.useState(null);
+
+  function responder() {
+    const achei = posts.find((p) => p.id === id);
+    if (!achei) setResposta({ status: 404, body: { erro: "não achei" } });
+    else setResposta({ status: 200, body: achei });
+  }
+
+  return (
+    &lt;div style={{ fontFamily: "monospace", padding: 16 }}&gt;
+      &lt;button onClick={() => { setId("1"); setResposta(null); }}&gt;pedir id=1&lt;/button&gt;
+      &lt;button onClick={() => { setId("99"); setResposta(null); }}&gt;pedir id=99&lt;/button&gt;
+      &lt;button onClick={responder}&gt;GET /api/posts/{id}&lt;/button&gt;
+      {resposta && (
+        &lt;p&gt;HTTP {resposta.status} — {JSON.stringify(resposta.body)}&lt;/p&gt;
+      )}
+    &lt;/div&gt;
+  );
+}</pre></div>
+<figure class="tela"><img src="assets/telas/api-routes.png" alt="Route Handler GET e POST em app/api/posts/route.js com testes no terminal via curl" width="1280" height="800" loading="lazy"><figcaption><code>GET /api/posts?q=next</code> lista com filtro; <code>POST /api/posts</code> valida o body e devolve 201 — ou 400 com a mensagem de erro.</figcaption></figure>
+<h2>Quando dá errado</h2>
+<div class="warning"><strong>Erro:</strong> devolver o body sem <code>await</code>, ou esquecer que <code>request.json()</code> é assíncrono — o classic de API Route:</div>
+<pre class="out">TypeError: body used already / Cannot read properties of undefined (reading 'titulo')
+  at POST (app/api/posts/route.js:10:5)</pre>
+<p>Tradução: a função leu o body antes da hora (ou o body veio vazio porque o <code>Content-Type</code> não era <code>application/json</code>). <strong>Correção:</strong> sempre <code>const body = await request.json();</code> e, se for um teste com <code>curl</code>, mandar o header <code>-H "Content-Type: application/json"</code>. Outro erro real: nomear o arquivo <code>app/api/posts/index.js</code> — no App Router o arquivo <strong>obrigatoriamente</strong> se chama <code>route.js</code>.</p>
+<h2>Exercícios</h2>
+<div class="mc" data-answer="2"><p class="mc-q">1. Que nome o arquivo de API precisa ter no App Router?</p><label><input type="radio">api.js</label><label><input type="radio">route.js</label><label><input type="radio">index.js</label><label><input type="radio">handler.js</label><p class="mc-feedback"></p></div>
+<div class="mc" data-answer="4"><p class="mc-q">2. Como devolver um JSON com status 201 (Created)?</p><label><input type="radio"><code>return { post }</code></label><label><input type="radio"><code>return Response.json(post, 201)</code></label><label><input type="radio"><code>res.status(201).json(post)</code></label><label><input type="radio"><code>NextResponse.json(post, { status: 201 })</code></label><p class="mc-feedback"></p></div>
+<div class="exercise" data-regex="const\s*\{\s*id\s*\}\s*=\s*await\s*params"><p><strong>3. Complete:</strong> dentro de um Route Handler, como você lê o parâmetro dinâmico de <code>app/api/posts/[id]/route.js</code> no Next 15?</p><div class="ex-code"><input class="ex-input" type="text" placeholder="escreva aqui…" style="width:100%"></div><div class="ex-actions"><button type="button">Verificar</button></div><p class="ex-result"></p></div>
+<div class="pager"></div></div></main></div><script src="assets/site.js"></script></body></html>

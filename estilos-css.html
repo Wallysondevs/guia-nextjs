@@ -1,0 +1,76 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Estilos e CSS no Next.js | Guia Next.js</title><meta name="description" content="Aprenda as três formas de estilizar no Next.js: CSS global (globals.css importado no layout), CSS Modules (.module.css com escopo local) e Tailwind CSS opcional. Erros reais de import de CSS global.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
+<div class="pager"></div>
+<h1>Estilos e CSS</h1>
+<p class="intro">A página da Ana funciona, mas está feia: texto preto no branco, tudo grudado. O Next.js aceita três jeitos de colocar estilo: o <strong>CSS global</strong> (um arquivo único para o site todo), os <strong>CSS Modules</strong> (CSS com escopo por componente) e o <strong>Tailwind</strong> (classes utilitárias, se ela escolheu Yes no create-next-app). Nesta página vamos usar os dois primeiros.</p>
+<div class="note"><strong>Você vai aprender</strong><ul><li>CSS global: <code>globals.css</code> importado no <code>app/layout.jsx</code></li><li>CSS Modules: <code>Nome.module.css</code> + <code>className={styles.classe}</code></li><li>Por que CSS global só pode ser importado no layout raiz (erro real)</li><li>Tailwind opcional: o que muda se escolheu Yes no assistente</li><li>Convenção: componente e módulo lado a lado</li></ul></div>
+<hr><h2>A ideia: reboco da casa vs tinta de um só cômodo</h2>
+<p>Pense no site como uma casa. O <strong>CSS global</strong> (<code>globals.css</code>) é o <strong>reboco e a pintura geral da casa</strong>: define a cor da parede de todos os cômodos, a fonte padrão, como os links aparecem em qualquer lugar. Ele é importado <strong>uma única vez</strong>, no <code>app/layout.jsx</code>, e vale para o site inteiro. É por isso que o Next.js proíbe importar CSS global em qualquer outro lugar — se cada página importasse o reboco, a casa teria dez mãos de tinta diferentes e o resultado seria uma bagunça.</p>
+<p>Já o <strong>CSS Module</strong> é a <strong>tinta de um só cômodo</strong>: o arquivo <code>Botao.module.css</code> só vale para o componente <code>Botao.jsx</code> que importar ele. O Next.js dá um nome embaralhado para cada classe (tipo <code>Botao_titulo__x7f2a</code>), garantindo que a classe <code>.titulo</code> do botão não vaze para o título de outra página — mesmo que outra página também tenha uma classe chamada <code>.titulo</code>. É isolamento automático, sem você pensar.</p>
+<p>E o Tailwind? Se a Ana respondeu Yes na pergunta do create-next-app, o projeto já vem com o Tailwind ligado: em vez de escrever CSS, ela usa classes prontas no HTML (<code>className="bg-blue-500 text-white p-4"</code>). É um kit de LEGO de estilos. Neste guia vamos focar em CSS puro para você entender a base, mas se o seu projeto tem Tailwind, pode usar as classes direto.</p>
+<h2>1) CSS global: globals.css no layout</h2>
+<pre class="file" data-file="app/layout.jsx">import "./globals.css"; // ← CSS global, só aqui no layout raiz
+// ... resto do layout</pre>
+<pre class="file" data-file="app/globals.css">/* vale para o site inteiro */
+body {
+  font-family: Arial, sans-serif;
+  background: #fafafa;
+  color: #111;
+  margin: 0;
+}
+
+h1 {
+  color: #2563eb;
+}
+
+nav a {
+  margin-right: 16px;
+  color: #111;
+  text-decoration: none;
+}</pre>
+<h2>2) CSS Module: estilos com escopo por componente</h2>
+<p>Crie o módulo ao lado do componente e importe com um nome (por convenção, <code>styles</code>):</p>
+<pre class="file" data-file="app/Botao.jsx">import styles from "./Botao.module.css";
+
+export default function Botao() {
+  return &lt;button className={styles.botao}&gt;Clique aqui&lt;/button&gt;;
+}</pre>
+<pre class="file" data-file="app/Botao.module.css">/* só vale para o Botao.jsx — o .botao daqui não conflita com outro */
+.botao {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.botao:hover {
+  background: #1d4ed8;
+}</pre>
+<figure class="tela"><img src="assets/telas/estilos-css.png" alt="Comparação lado a lado: página sem CSS (texto preto puro) e a mesma página com CSS aplicado (título estilizado, card e botão azul)" width="1280" height="800" loading="lazy"><figcaption>Antes e depois: o mesmo conteúdo com CSS global + módulo — repare que o botão ganhou cor e borda arredondada só por causa do <code>.module.css</code>.</figcaption></figure>
+<div class="table-wrap"><table class="ref"><tr><th>Tipo</th><th>Arquivo</th><th>Import</th><th>Escopo</th></tr><tr><td>CSS global</td><td><code>globals.css</code></td><td>só no <code>app/layout.jsx</code></td><td>Site inteiro</td></tr><tr><td>CSS Module</td><td><code>Nome.module.css</code></td><td>no componente: <code>import styles from "./Nome.module.css"</code></td><td>Só aquele componente</td></tr><tr><td>Tailwind (opcional)</td><td>classes no HTML</td><td>já vem pronto se escolheu Yes</td><td>Onde aplicar a classe</td></tr><tr><td>CSS-in-JS</td><td>—</td><td>não é o foco do guia</td><td>—</td></tr></table></div>
+<h2>Quando dá errado</h2>
+<div class="warning"><strong>Erro:</strong> a Ana tentou importar o CSS global dentro de uma página (app/page.jsx) e o build quebrou:</div>
+<pre class="out">Error: Global CSS cannot be imported from files other than your Custom App.
+Due to its global side effects, global CSS cannot be imported from within
+the app directory. Please move it to app/layout.jsx.
+
+Dica do guia: no App Router, CSS global (globals.css) só entra pelo
+app/layout.jsx. Em página/componente, use CSS Module (.module.css).</pre>
+<div class="warning"><strong>Erro:</strong> a classe do módulo não aplicou (esqueceu o <code>styles.</code>):</div>
+<pre class="out">(não dá erro — a classe simplesmente não aparece; o botão fica sem estilo)
+&lt;button className="botao"&gt;  ← errado no módulo
+&lt;button className={styles.botao}&gt;  ← certo
+
+Dica do guia: com CSS Module, a classe é acessada como propriedade do objeto
+importado: styles.botao — nunca string "botao".</pre>
+<h2>Exercícios</h2>
+<div class="mc" data-answer="1"><p class="mc-q">1. Onde o CSS global (globals.css) deve ser importado no App Router?</p><label><input type="radio" name="q1">Em app/layout.jsx (layout raiz)</label><label><input type="radio" name="q1">Em app/page.jsx</label><label><input type="radio" name="q1">Em qualquer componente</label><label><input type="radio" name="q1">No package.json</label><p class="mc-feedback"></p></div>
+<div class="mc" data-answer="2"><p class="mc-q">2. Como se usa uma classe de um CSS Module dentro do JSX?</p><label><input type="radio" name="q2">className="botao"</label><label><input type="radio" name="q2">className={styles.botao}</label><label><input type="radio" name="q2">class="botao" com import</label><label><input type="radio" name="q2">style={botao}</label><p class="mc-feedback"></p></div>
+<div class="exercise" data-answer="Botao.module.css"><h2>Exercício 1</h2><p>Se o componente é <code>Botao.jsx</code>, como deve se chamar o arquivo de CSS Module dele (convenção lado a lado)?</p><div class="ex-code"><input class="ex-input" type="text" placeholder="ex.: Nome..." style="width:100%"></div><div class="ex-actions"><button type="button">Verificar</button></div><p class="ex-result"></p></div>
+<div class="pager"></div></div></main></div><script src="assets/site.js"></script></body></html>

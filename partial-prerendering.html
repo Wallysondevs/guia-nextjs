@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Partial Prerendering (PPR): estático e dinâmico na mesma página | Guia Next.js</title>
+<meta name="description" content="PPR (experimental) permite uma página com shell estático servido na hora e ilhas dinâmicas em streaming via Suspense — o melhor de SSG e SSR juntos. Veja experimental.ppr no next.config e como separar o estático do dinâmico.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+<div class="pager"></div>
+<h1>Partial Prerendering (PPR): estático e dinâmico na mesma página</h1>
+<p class="intro">A Ana queria o melhor dos dois mundos numa página só: a capa e o menu <strong>estáticos</strong> (rápidos, cacheáveis) e o preço do produto <strong>ao vivo</strong> (dinâmico). Com o <strong>PPR</strong> — Partial Prerendering, ainda experimental — o Next.js entrega exatamente isso: um "shell" estático servido na hora e ilhas dinâmicas que chegam por streaming dentro do mesmo HTML.</p>
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>O que é PPR: um único HTML com parte pré-renderizada (estática) + <code>&lt;Suspense&gt;</code> para o resto</li>
+<li>Ativar com <code>experimental: { ppr: true }</code> (Next.js 15: <code>ppr: 'incremental'</code> + <code>dynamicIO</code>) no <code>next.config</code></li>
+<li>O que pode ficar fora do Suspense (estático) e o que precisa ficar dentro (dinâmico)</li>
+<li>O custo: a página shell é servida do cache e a parte dinâmica é "furada" depois</li>
+</ul></div>
+<hr>
+<h2>A ideia: a capa da revista com o preço riscado a caneta</h2>
+<p>Imagine uma revista impressa: a <strong>capa, o índice e os artigos</strong> são todos iguais para todo mundo — foram impressos uma vez e ficam prontos na banca (isso é o shell estático). Só um pedacinho, o <strong>preço riscado à mão na hora</strong>, muda para cada cliente (isso é a parte dinâmica). O PPR é essa revista: o Next.js pré-renderiza tudo que é igual para todos e deixa "buracos" com <code>&lt;Suspense&gt;</code> exatamente onde os dados precisam ser frescos — <code>cookies()</code>, <code>headers()</code>, banco de dados ao vivo.</p>
+<p>Na prática, a primeira requisição recebe o <strong>shell estático instantâneo</strong> (vem do cache/CDN) com os fallbacks nos buracos, e o servidor continua o trabalho em segundo plano: quando a parte dinâmica fica pronta, ela entra no lugar via streaming — a mesma mágica da aula anterior, mas agora <em>metade da página já está cacheada</em>. O resultado: TTFB baixo (rápido) <strong>e</strong> dados frescos onde precisa.</p>
+<p>A regra prática da Ana: <strong>tudo que não depende do pedido pode ficar fora do Suspense</strong> (nome do site, layout, lista de categorias cacheada) e vira parte do shell estático; <strong>tudo que lê o pedido</strong> (<code>cookies()</code>, <code>params</code> de busca, dados que mudam toda hora) entra num <code>&lt;Suspense&gt;</code> e vira ilha dinâmica.</p>
+<h2>Ativando o PPR e separando as partes</h2>
+<pre class="file" data-file="next.config.js">/** @type {import('next').NextConfig} */
+const nextConfig = {
+  experimental: {
+    ppr: 'incremental', // Next.js 15: PPR incremental (antes era true/false)
+  },
+};
+
+module.exports = nextConfig;</pre>
+<pre class="file" data-file="app/page.jsx">import { Suspense } from 'react';
+import Header from './Header';        // estático: fora do Suspense -&gt; vira parte do shell
+import PrecoAoVivo from './PrecoAoVivo'; // dinâmico: dentro do Suspense -&gt; ilha
+
+export const experimental_ppr = true; // opt-in por rota (modo incremental)
+
+export default function Home() {
+  return (
+    &lt;&gt;
+      &lt;Header /&gt;  {/* shell estático: servido do cache na hora */}
+      &lt;main&gt;
+        &lt;h1&gt;🛒 Loja da Ana&lt;/h1&gt;
+        &lt;p&gt;Produtos e descrição: estáticos.&lt;/p&gt;
+        &lt;Suspense fallback={&lt;p&gt;⏳ Buscando preço atual…&lt;/p&gt;}&gt;
+          &lt;PrecoAoVivo /&gt;  {/* ilha dinâmica: completa depois, via streaming */}
+        &lt;/Suspense&gt;
+      &lt;/main&gt;
+    &lt;/&gt;
+  );
+}</pre>
+<pre class="file" data-file="app/PrecoAoVivo.jsx">import { cookies } from 'next/headers';
+
+export default async function PrecoAoVivo() {
+  // qualquer leitura de pedido (cookies/headers) ou fetch no-store =&gt; island dinâmica
+  const session = await cookies();
+  const res = await fetch('https://api.exemplo.com/preco', { cache: 'no-store' });
+  const { preco } = await res.json();
+  return &lt;p&gt;💵 Preço agora (para a sua sessão): &lt;strong&gt;R$ {preco}&lt;/strong&gt;&lt;/p&gt;;
+}</pre>
+<figure class="tela"><img src="assets/telas/n3-ppr.png" alt="Página com shell estático e parte dinâmica em streaming (PPR)" width="1280" height="800" loading="lazy"><figcaption>Com PPR, a capa (shell) chega na hora do cache e o preço ao vivo entra depois, dentro do Suspense.</figcaption></figure>
+<div class="tryreact" data-goal="fallback"><p class="try-task"><strong>Missão:</strong> no código abaixo, o <code>&lt;Header /&gt;</code> está <strong>dentro</strong> do Suspense junto com o preço — assim ele também fica esperando. Mova o <code>&lt;Header /&gt;</code> para <strong>fora</strong> do <code>&lt;React.Suspense&gt;</code> e deixe só o <code>&lt;Preco /&gt;</code> dentro, com um <code>fallback</code> de "carregando preço…". Rode antes e depois para sentir a diferença. Depois clique em <em>Verificar missão</em>.</p><pre class="script" data-file="App.jsx">function Header() {
+  return &lt;p&gt;🏠 Loja da Ana — shell que poderia ser estático&lt;/p&gt;;
+}
+
+function Preco() {
+  // simula dado ao vivo (2s)
+  const P = React.lazy(() =&gt; new Promise(res =&gt; setTimeout(() =&gt;
+    res({ default: () =&gt; &lt;p&gt;💵 Preço ao vivo: R$ 99,90&lt;/p&gt; }), 2000)));
+  return &lt;P /&gt;;
+}
+
+function App() {
+  return (
+    &lt;div&gt;
+      {/* TODO: tire o Header daqui de dentro e coloque antes do Suspense */}
+      &lt;React.Suspense fallback={&lt;p&gt;⏳ carregando…&lt;/p&gt;}&gt;
+        &lt;Header /&gt;
+        &lt;Preco /&gt;
+      &lt;/React.Suspense&gt;
+    &lt;/div&gt;
+  );
+}</pre><pre class="solucao" data-file="App.jsx">function Header() {
+  return &lt;p&gt;🏠 Loja da Ana — shell que poderia ser estático&lt;/p&gt;;
+}
+
+function Preco() {
+  const P = React.lazy(() =&gt; new Promise(res =&gt; setTimeout(() =&gt;
+    res({ default: () =&gt; &lt;p&gt;💵 Preço ao vivo: R$ 99,90&lt;/p&gt; }), 2000)));
+  return &lt;P /&gt;;
+}
+
+function App() {
+  return (
+    &lt;div&gt;
+      &lt;Header /&gt;  {/* fora: aparece na hora */}
+      &lt;React.Suspense fallback={&lt;p&gt;⏳ carregando preço…&lt;/p&gt;}&gt;
+        &lt;Preco /&gt;  {/* dentro: entra depois */}
+      &lt;/React.Suspense&gt;
+    &lt;/div&gt;
+  );
+}</pre></div>
+<h2>Quando dá errado</h2>
+<div class="warning"><strong>Erro real:</strong> ativar PPR sem o modo incremental e usar leitura dinâmica fora do Suspense. O build falha dizendo que a rota usa IO dinâmico sem estar coberta por Suspense:</div>
+<pre class="out">Error: Route / used dynamic IO (cookies/headers/fetch no-store) outside a Suspense
+boundary with PPR enabled. Wrap the dynamic part in &lt;Suspense&gt; or disable PPR
+for this route with `export const experimental_ppr = false`.</pre>
+<div class="warning"><strong>Confusão comum:</strong> a página "não atualizou" depois de ligar o PPR. Com PPR incremental, só as rotas com <code>export const experimental_ppr = true</code> participent — as outras continuam no comportamento antigo. E lembre: a parte estática só é recriada no deploy ou no revalidate; a parte dinâmica é que é ao vivo.</div>
+<pre class="out">GET /  →  served from cache (shell estático, ~30ms)
+   ↳ Suspense island: preço ao vivo completado em 400ms (streaming)</pre>
+<h2>Exercícios</h2>
+<div class="mc" data-answer="2"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">Com PPR, o que é o "shell" estático?</p><label><input type="radio" name="q1">O arquivo JavaScript do cliente</label><label><input type="radio" name="q1">A parte da página pré-renderizada igual para todos, servida do cache na hora</label><label><input type="radio" name="q1">O banco de dados</label></div>
+<div class="mc" data-answer="3"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">No modo incremental do PPR (Next.js 15), como uma rota <strong>entra</strong> no PPR?</p><label><input type="radio" name="q2">Basta ligar <code>experimental.ppr</code> no config</label><label><input type="radio" name="q2">É preciso <code>export const dynamic = 'force-static'</code> na rota</label><label><input type="radio" name="q2">Com <code>export const experimental_ppr = true</code> na página + <code>experimental.ppr: 'incremental'</code> no config</label></div>
+<div class="mc" data-answer="1"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">Onde deve ficar a leitura de <code>cookies()</code> numa página com PPR?</p><label><input type="radio" name="q3">Dentro de um <code>&lt;Suspense&gt;</code> (ilha dinâmica)</label><label><input type="radio" name="q3">Direto no layout raiz, fora de qualquer Suspense</label><label><input type="radio" name="q3">Num arquivo <code>loading.jsx</code></label></div>
+<div class="exercise" data-answer="incremental"><p>Complete a flag do config que ativa o PPR incremental:</p><div class="ex-code">experimental: { ppr: '<input class="ex-input" autocomplete="off" spellcheck="false" autocapitalize="off">' }</div><div class="ex-actions"><button type="button">Verificar</button><span class="ex-result" aria-live="polite"></span></div></div>
+<div class="exercise" data-answer="true"><p>Complete o opt-in da rota para PPR:</p><div class="ex-code">export const experimental_ppr = <input class="ex-input" autocomplete="off" spellcheck="false" autocapitalize="off"></div><div class="ex-actions"><button type="button">Verificar</button><span class="ex-result" aria-live="polite"></span></div></div>
+<div class="pager"></div>
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

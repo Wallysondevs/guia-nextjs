@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projeto: Loja com carrinho, Server Actions e Stripe | Guia Next.js</title>
+<meta name="description" content="Projeto guiado: uma lojinha em Next.js com lista de produtos estática, carrinho salvo em cookie via Server Actions ('use server', revalidatePath), checkout com Stripe (redirectToCheckout) e webhook em app/api/stripe/webhook/route.js.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+<div class="pager"></div>
+<h1>Projeto: Loja com carrinho, Server Actions e Stripe</h1>
+<p class="intro">A Ana quer vender seus bolos online. Nesta projeto você monta a lojinha inteira: produtos listados de forma estática (rápido), um <strong>carrinho que vive num cookie</strong> atualizado por <strong>Server Actions</strong> (sem API separada!) e o pagamento redirecionando para o <strong>checkout hospedado do Stripe</strong>, com webhook para confirmar o pedido.</p>
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>Server Actions: arquivo <code>'use server'</code> com funções async que reciben <code>FormData</code></li>
+<li>Gravar o carrinho em <code>cookies()</code> dentro da action + <code>revalidatePath('/')</code></li>
+<li>Form com <code>&lt;form action={addToCart}&gt;</code> e <code>useFormStatus</code> para o botão "adicionando…"</li>
+<li>Stripe: criar sessão de checkout no servidor e redirecionar (<code>redirectToCheckout</code> / URL da sessão)</li>
+<li>Webhook em <code>app/api/stripe/webhook/route.js</code> com verificação de assinatura</li>
+</ul></div>
+<hr>
+<h2>A ideia: o pedido no balcão sem papelzinho</h2>
+<p>Numa loja física, o cliente pega o produto e o atendente anota no pedido — o pedido não fica grudado no produto, fica numa fichinha separada. No Next.js, o <strong>Server Action</strong> é o atendente: o navegador manda um <code>&lt;form action={…}&gt;</code> (ou chama a função direto) e o <strong>servidor</strong> executa a função — ler/gravar cookie, consultar o banco, chamar a API do Stripe — sem existir uma API REST no meio. O carrinho da Ana vai numa fichinha (cookie) lida e gravada no servidor, e a página é revalidada com <code>revalidatePath</code> para mostrar o carrinho novo.</p>
+<p>O pagamento segue o mesmo fluxo seguro: o servidor cria uma <strong>sessão de checkout no Stripe</strong> (com os itens e URLs de sucesso/cancelamento) e manda o navegador para a página hospedada do Stripe (PCI-compliant — o cartão nunca passa pelo seu servidor). Quando o cliente paga, o Stripe avisa seu servidor pelo <strong>webhook</strong> (uma URL que recebe POSTs assinados) e aí você marca o pedido como pago no banco.</p>
+<h2>Passo 1 — produtos e Server Action do carrinho</h2>
+<pre class="file" data-file="lib/produtos.js">export const PRODUTOS = [
+  { id: 'bolo-cenoura', nome: 'Bolo de cenoura', preco: 35.0, img: '/bolos/cenoura.jpg' },
+  { id: 'bolo-chocolate', nome: 'Bolo de chocolate', preco: 40.0, img: '/bolos/chocolate.jpg' },
+  { id: 'torta-limao', nome: 'Torta de limão', preco: 45.0, img: '/bolos/limao.jpg' },
+];
+
+export function pegarProduto(id) {
+  return PRODUTOS.find(p =&gt; p.id === id);
+}</pre>
+<pre class="file" data-file="app/actions.js">'use server';
+
+import { cookies } from 'next/headers';
+import { revalidatePath } from 'next/cache';
+import { pegarProduto } from '@/lib/produtos';
+
+export async function addToCart(formData) {
+  const id = formData.get('produtoId');
+  const produto = pegarProduto(id);
+  if (!produto) return;
+
+  const jar = await cookies();
+  const atual = JSON.parse(jar.get('carrinho')?.value || '{}');
+  atual[id] = (atual[id] || 0) + 1;
+
+  jar.set('carrinho', JSON.stringify(atual), { httpOnly: true, path: '/', maxAge: 60 * 60 * 24 * 7 });
+  revalidatePath('/'); // a home passa a mostrar o carrinho atualizado
+}
+
+export async function removerDoCart(formData) {
+  const id = formData.get('produtoId');
+  const jar = await cookies();
+  const atual = JSON.parse(jar.get('carrinho')?.value || '{}');
+  delete atual[id];
+  jar.set('carrinho', JSON.stringify(atual), { httpOnly: true, path: '/' });
+  revalidatePath('/');
+}</pre>
+<h2>Passo 2 — páginas: home (produtos) e carrinho</h2>
+<pre class="file" data-file="app/page.jsx">import Image from 'next/image';
+import { PRODUTOS } from '@/lib/produtos';
+import { addToCart } from './actions';
+import Carrinho from './Carrinho';
+
+export const dynamic = 'force-dynamic'; // lê cookie → SSR (carrinho sempre fresco)
+
+export default function Home() {
+  return (
+    &lt;main&gt;
+      &lt;Carrinho /&gt;
+      &lt;h1&gt;🍰 Loja da Ana&lt;/h1&gt;
+      &lt;div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}&gt;
+        {PRODUTOS.map(p =&gt; (
+          &lt;div key={p.id} style={{ border: '1px solid #ccc', padding: 12 }}&gt;
+            &lt;Image src={p.img} alt={p.nome} width={300} height={200} /&gt;
+            &lt;h3&gt;{p.nome}&lt;/h3&gt;
+            &lt;p&gt;R$ {p.preco.toFixed(2)}&lt;/p&gt;
+            &lt;form action={addToCart}&gt;
+              &lt;input type="hidden" name="produtoId" value={p.id} /&gt;
+              &lt;BotaoAdicionar /&gt;
+            &lt;/form&gt;
+          &lt;/div&gt;
+        ))}
+      &lt;/div&gt;
+    &lt;/main&gt;
+  );
+}</pre>
+<pre class="file" data-file="app/BotaoAdicionar.jsx">'use client';
+import { useFormStatus } from 'react-dom';
+
+export default function BotaoAdicionar() {
+  const { pending } = useFormStatus();
+  return &lt;button disabled={pending}&gt;{pending ? 'Adicionando…' : '🛒 Adicionar'}&lt;/button&gt;;
+}</pre>
+<pre class="file" data-file="app/Carrinho.jsx">import { cookies } from 'next/headers';
+import { PRODUTOS } from '@/lib/produtos';
+import { removerDoCart } from './actions';
+import { checkout } from './stripe-actions';
+
+export default async function Carrinho() {
+  const jar = await cookies();
+  const carrinho = JSON.parse(jar.get('carrinho')?.value || '{}');
+  const itens = Object.entries(carrinho)
+    .map(([id, qtd]) =&gt; ({ ...PRODUTOS.find(p =&gt; p.id === id), qtd }))
+    .filter(i =&gt; i.nome);
+  if (!itens.length) return &lt;p&gt;🛒 Carrinho vazio&lt;/p&gt;;
+
+  return (
+    &lt;aside style={{ border: '1px solid #999', padding: 12 }}&gt;
+      &lt;h2&gt;🛒 Carrinho&lt;/h2&gt;
+      &lt;ul&gt;{itens.map(i =&gt; (
+        &lt;li key={i.id}&gt;
+          {i.nome} × {i.qtd} — R$ {(i.preco * i.qtd).toFixed(2)}
+          &lt;form action={removerDoCart}&gt;
+            &lt;input type="hidden" name="produtoId" value={i.id} /&gt;
+            &lt;button&gt;remover&lt;/button&gt;
+          &lt;/form&gt;
+        &lt;/li&gt;
+      ))}&lt;/ul&gt;
+      &lt;form action={checkout}&gt;
+        {itens.map(i =&gt; &lt;input key={i.id} type="hidden" name={`qtd_${i.id}`} value={i.qtd} /&gt;)}
+        &lt;button&gt;💳 Pagar com Stripe&lt;/button&gt;
+      &lt;/form&gt;
+    &lt;/aside&gt;
+  );
+}</pre>
+<h2>Passo 3 — checkout com Stripe e webhook</h2>
+<pre class="file" data-file="app/stripe-actions.js">'use server';
+
+import Stripe from 'stripe';
+import { redirect } from 'next/navigation';
+import { PRODUTOS } from '@/lib/produtos';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY); // segredo: só no servidor
+
+export async function checkout(formData) {
+  const lineItems = PRODUTOS
+    .filter(p =&gt; formData.get(`qtd_${p.id}`))
+    .map(p =&gt; ({
+      price_data: {
+        currency: 'brl',
+        product_data: { name: p.nome },
+        unit_amount: Math.round(p.preco * 100), // centavos
+      },
+      quantity: Number(formData.get(`qtd_${p.id}`)),
+    }));
+
+  const session = await stripe.checkout.sessions.create({
+    mode: 'payment',
+    line_items: lineItems,
+    success_url: `${process.env.NEXT_PUBLIC_URL}/sucesso?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${process.env.NEXT_PUBLIC_URL}/`,
+  });
+
+  redirect(session.url); // manda o cliente para a página de pagamento do Stripe
+}</pre>
+<pre class="file" data-file="app/api/stripe/webhook/route.js">import Stripe from 'stripe';
+import { NextResponse } from 'next/server';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+export async function POST(req) {
+  const body = await req.text();
+  const sig = req.headers.get('stripe-signature');
+
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(body, sig, webhookSecret); // valida a assinatura
+  } catch (e) {
+    return NextResponse.json({ erro: 'assinatura inválida' }, { status: 400 });
+  }
+
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+    console.log('✅ pagamento confirmado:', session.id);
+    // aqui: salva o pedido no banco (Prisma) e manda e-mail de confirmação
+  }
+  return NextResponse.json({ received: true });
+}</pre>
+<pre class="file" data-file=".env.local">NEXT_PUBLIC_URL=http://localhost:3000
+STRIPE_SECRET_KEY=sk_test_…
+STRIPE_WEBHOOK_SECRET=whsec_…   # vem de: stripe listen --forward-to localhost:3000/api/stripe/webhook</pre>
+<figure class="tela"><img src="assets/telas/proj-loja.png" alt="Loja com produtos, carrinho e checkout Stripe" width="1280" height="800" loading="lazy"><figcaption>Produtos estáticos, carrinho no cookie via Server Action e botão de pagamento que abre o checkout do Stripe.</figcaption></figure>
+<div class="tryreact" data-goal="use server"><p class="try-task"><strong>Missão:</strong> no código abaixo, a função que adiciona ao carrinho está sem a diretiva de servidor. Adicione <code>'use server';</code> na primeira linha do arquivo (é assim que o Next.js sabe que essa função roda no servidor e pode mexer em cookie). Rode e clique em <em>Verificar missão</em>.</p><pre class="script" data-file="app/actions.js">// TODO: 'use server';
+
+async function addToCart(formData) {
+  const id = formData.get('produtoId');
+  return { ok: true, id };
+}
+
+function App() {
+  const [msg, setMsg] = React.useState('');
+  return (
+    &lt;div&gt;
+      &lt;h1&gt;🛒 Carrinho&lt;/h1&gt;
+      &lt;button onClick={async () =&gt; setMsg(JSON.stringify(await addToCart(new FormData())))}&gt;
+        adicionar (chama a action)
+      &lt;/button&gt;
+      &lt;p&gt;{msg}&lt;/p&gt;
+    &lt;/div&gt;
+  );
+}</pre><pre class="solucao" data-file="app/actions.js">'use server';
+
+async function addToCart(formData) {
+  const id = formData.get('produtoId');
+  return { ok: true, id };
+}
+
+function App() {
+  const [msg, setMsg] = React.useState('');
+  return (
+    &lt;div&gt;
+      &lt;h1&gt;🛒 Carrinho&lt;/h1&gt;
+      &lt;button onClick={async () =&gt; setMsg(JSON.stringify(await addToCart(new FormData())))}&gt;
+        adicionar (chama a action)
+      &lt;/button&gt;
+      &lt;p&gt;{msg}&lt;/p&gt;
+    &lt;/div&gt;
+  );
+}</pre></div>
+<h2>Quando dá errado</h2>
+<div class="warning"><strong>Erro real:</strong> chamar uma função comum (sem <code>'use server'</code>) como <code>action</code> do form:</div>
+<pre class="out">Error: Functions cannot be passed directly to Client Components…
+→ a action precisa ser async e marcada com 'use server' (no arquivo todo ou na função:
+  async function minhaAction() { 'use server'; … })</pre>
+<div class="warning"><strong>Webhook que não chega:</strong> em dev, o Stripe não manda webhook para <code>localhost</code> sozinho. Use o CLI: <code>stripe listen --forward-to localhost:3000/api/stripe/webhook</code> e copie o <code>whsec_…</code> para o <code>.env.local</code>. Em produção, cadastre a URL em Stripe → Developers → Webhooks.</div>
+<pre class="out">stripe listen --forward-to localhost:3000/api/stripe/webhook
+Ready! Your webhook signing secret is whsec_…</pre>
+<h2>Exercícios</h2>
+<div class="mc" data-answer="2"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">Uma Server Action é:</p><label><input type="radio" name="q1">Uma função de cliente com <code>useState</code></label><label><input type="radio" name="q1">Uma função async marcada com <code>'use server'</code> que roda <strong>no servidor</strong> (dá para ler cookie e chamar API secreta)</label><label><input type="radio" name="q1">Um middleware</label></div>
+<div class="mc" data-answer="1"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">Depois de mudar o carrinho no cookie, para a página mostrar o valor novo usa-se:</p><label><input type="radio" name="q2"><code>revalidatePath('/')</code></label><label><input type="radio" name="q2"><code>window.reload()</code></label><label><input type="radio" name="q2"><code>localStorage.clear()</code></label></div>
+<div class="mc" data-answer="3"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">No checkout do Stripe, o cartão do cliente <strong>nunca</strong> passa pelo seu servidor porque:</p><label><input type="radio" name="q3">O Stripe bloqueia IPs</label><label><input type="radio" name="q3">Usa criptografia mágica</label><label><input type="radio" name="q3">O navegador é redirecionado para a página de pagamento hospedada pelo próprio Stripe</label></div>
+<div class="exercise" data-answer="use server"><p>Complete a diretiva que transforma o arquivo inteiro em Server Actions:</p><div class="ex-code">'<input class="ex-input" autocomplete="off" spellcheck="false" autocapitalize="off">';</div><div class="ex-actions"><button type="button">Verificar</button><span class="ex-result" aria-live="polite"></span></div></div>
+<div class="exercise" data-answer="/"><p>Complete a função que revalida a home após mudar o carrinho:</p><div class="ex-code">revalidatePath('<input class="ex-input" autocomplete="off" spellcheck="false" autocapitalize="off">')</div><div class="ex-actions"><button type="button">Verificar</button><span class="ex-result" aria-live="polite"></span></div></div>
+<div class="pager"></div>
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

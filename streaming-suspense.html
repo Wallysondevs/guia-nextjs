@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Streaming e Suspense: a página chega em partes | Guia Next.js</title>
+<meta name="description" content="Com Suspense, loading.jsx e componentes async, o Next.js manda o HTML em streaming: oshell rápido chega primeiro e as partes lentas (comentários, recomendações) entram depois no lugar certo, sem bloquear a página.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+<div class="pager"></div>
+<h1>Streaming e Suspense: a página chega em partes</h1>
+<p class="intro">A Ana reparou que algumas páginas dela demoravam demais para mostrar <em>qualquer coisa</em>: o visitante ficava olhando para uma tela branca até o último dado chegar. Com <strong>streaming</strong>, o Next.js manda o HTML em pedaços: o miolo rápido chega na hora e as partes lentas vão entrando depois, no lugar certo. Nesta aula você monta isso com <code>&lt;Suspense&gt;</code>, <code>loading.jsx</code> e componentes <code>async</code>.</p>
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>O que é streaming de HTML (o servidor manda <code>&lt;div hidden&gt;</code> + um <code>&lt;script&gt;</code> que troca o conteúdo quando chega)</li>
+<li><code>&lt;Suspense fallback={...}&gt;</code> em volta de componentes <code>async</code> no Server Component</li>
+<li><code>loading.jsx</code>: o fallback automático de um segmento inteiro da rota</li>
+<li>Por que a página inicial fica mais rápida (TTFB menor) mesmo com dados lentos</li>
+<li>O limite: <code>useSearchParams()</code> dentro de página estática precisa de Suspense</li>
+</ul></div>
+<hr>
+<h2>A ideia: o jornal que imprime a manchete antes da charge</h2>
+<p>Imagine um jornal que só sai da gráfica quando a <strong>charge do dia</strong> fica pronta — se o chargista atrasa, ninguém recebe nada. Isso é a página sem streaming: um componente <code>async</code> lento segura o HTML inteiro. Agora imagine o jornal que imprime a <strong>manchete primeiro</strong> e, na mesma dobra, um espaço em branco com um <em>"desenho chega já já"</em>: o leitor já tem o essencial na hora, e a charge entra no espaço reservado quando fica pronta. Isso é o <strong>streaming com Suspense</strong>.</p>
+<p>Tecnicamente, o servidor manda o HTML em fluxo contínuo (<em>chunked</em>): primeiro o "shell" (cabeçalho, menu, texto) já utilizável, e as partes suspensas vão como blocos escondidos (<code>&lt;div hidden&gt;</code>) junto de um pequeno <code>&lt;script&gt;</code> que, quando os dados chegam, troca o <em>fallback</em> pelo conteúdo de verdade — sem recarregar a página. O navegador mostra o conteúdo parcial imediatamente e o resto "aparece" sozinho. Para o usuário, a página parece muito mais rápida; para o servidor, nada mudou além de não segurar tudo.</p>
+<p>O Next.js tem duas formas de declarar o "espaço reservado": o <code>&lt;Suspense&gt;</code> explícito em volta de um componente (controle fino, dentro da página) e o arquivo <code>loading.jsx</code> na pasta da rota (o fallback vale para o segmento inteiro — ótimo para a troca de página inteira).</p>
+<h2>Componente async + Suspense no App Router</h2>
+<pre class="file" data-file="app/page.jsx">import { Suspense } from 'react';
+import Recomendados from './Recomendados'; // componente async (lento)
+import Comentarios from './Comentarios';   // componente async (lento)
+
+export default function Home() {
+  return (
+    &lt;main&gt;
+      &lt;h1&gt;📰 Portal da Ana&lt;/h1&gt;
+      &lt;p&gt;Este texto chega na hora — está fora do Suspense.&lt;/p&gt;
+
+      &lt;Suspense fallback={&lt;p&gt;⏳ Carregando comentários…&lt;/p&gt;}&gt;
+        &lt;Comentarios /&gt;
+      &lt;/Suspense&gt;
+
+      &lt;Suspense fallback={&lt;p&gt;⏳ Carregando recomendados…&lt;/p&gt;}&gt;
+        &lt;Recomendados /&gt;
+      &lt;/Suspense&gt;
+    &lt;/main&gt;
+  );
+}</pre>
+<pre class="file" data-file="app/Comentarios.jsx">// Componente de servidor async: o await aqui SUSPENDE só este pedaço
+export default async function Comentarios() {
+  const res = await fetch('https://jsonplaceholder.typicode.com/comments?_limit=3', {
+    cache: 'no-store', // dados que mudam: não deixa estático
+  });
+  const comentarios = await res.json();
+  // await new Promise(r =&gt; setTimeout(r, 3000)); // teste: simula lentidão de 3s
+  return (
+    &lt;section&gt;
+      &lt;h2&gt;💬 Comentários&lt;/h2&gt;
+      &lt;ul&gt;{comentarios.map(c =&gt; &lt;li key={c.id}&gt;{c.body}&lt;/li&gt;)}&lt;/ul&gt;
+    &lt;/section&gt;
+  );
+}</pre>
+<pre class="file" data-file="app/loading.jsx">// loading.jsx — fallback automático enquanto QUALQUER parte do segmento / carrega
+export default function Loading() {
+  return &lt;p role="status"&gt;⏳ Carregando a página…&lt;/p&gt;;
+}</pre>
+<figure class="tela"><img src="assets/telas/n3-streaming-suspense.png" alt="Página arriving em partes com Suspense" width="1280" height="800" loading="lazy"><figcaption>O shell chega primeiro; comentários e recomendados entram depois, nos espaços reservados pelo Suspense.</figcaption></figure>
+<h2>Por que isso deixa a página mais rápida</h2>
+<p>Sem streaming, o tempo até o primeiro byte de conteúdo útil (TTFB + render completo) inclui <strong>todos</strong> os awaits da página. Com Suspense, o navegador já recebe e pinta o shell no primeiro pacote — o <strong>LCP</strong> (maior conteúdo visível) acontece cedo, mesmo que os dados lentos ainda estejam vindo. O Next.js também manda os blocos suspensos com <code>hidden</code> e um script inline que faz a troca no lugar, então não há "pulo" de layout nem recarregamento.</p>
+<div class="tryreact" data-goal="React.Suspense"><p class="try-task"><strong>Missão:</strong> rode o código (<em>▶ Rodar</em>) — o componente <code>&lt;Lento /&gt;</code> está solto, sem boundary, e o React reclama. Depois <strong> envolva &lt;Lento /&gt; em &lt;React.Suspense fallback={...}&gt;</strong> com um fallback <code>&lt;p&gt;⏳ Carregando…&lt;/p&gt;</code>. Rode de novo: agora a parte rápida aparece na hora e o dado lento entra depois. Clique em <em>Verificar missão</em>.</p><pre class="script" data-file="App.jsx">function App() {
+  // simula um componente de servidor lento (3 segundos)
+  const Lento = React.lazy(() =&gt; new Promise(res =&gt; setTimeout(() =&gt;
+    res({ default: () =&gt; &lt;p&gt;🐢 Dados lentos chegaram!&lt;/p&gt; }), 3000)));
+
+  return (
+    &lt;div&gt;
+      &lt;h1&gt;📰 Portal&lt;/h1&gt;
+      &lt;p&gt;✅ Este texto aparece na hora.&lt;/p&gt;
+      {/* TODO: envolva &lt;Lento /&gt; em &lt;React.Suspense fallback={&lt;p&gt;⏳ Carregando…&lt;/p&gt;}&gt; */}
+      &lt;Lento /&gt;
+    &lt;/div&gt;
+  );
+}</pre><pre class="solucao" data-file="App.jsx">function App() {
+  const Lento = React.lazy(() =&gt; new Promise(res =&gt; setTimeout(() =&gt;
+    res({ default: () =&gt; &lt;p&gt;🐢 Dados lentos chegaram!&lt;/p&gt; }), 3000)));
+
+  return (
+    &lt;div&gt;
+      &lt;h1&gt;📰 Portal&lt;/h1&gt;
+      &lt;p&gt;✅ Este texto aparece na hora.&lt;/p&gt;
+      &lt;React.Suspense fallback={&lt;p&gt;⏳ Carregando…&lt;/p&gt;}&gt;
+        &lt;Lento /&gt;
+      &lt;/React.Suspense&gt;
+    &lt;/div&gt;
+  );
+}</pre></div>
+<h2>Quando dá errado</h2>
+<div class="warning"><strong>Erro real de build:</strong> a página usava <code>useSearchParams()</code> (hook de cliente) numa rota estática, sem Suspense. O Next.js para o build inteiro com esta mensagem — porque sem Suspense não há como fazer streaming dessa parte:</div>
+<pre class="out">Error: useSearchParams() should be wrapped in a suspense boundary at page "/dashboard".
+Read more: https://nextjs.org/docs/messages/missing-suspense-with-csr-bailout
+→ Solução: envolva o componente que usa useSearchParams em &lt;Suspense&gt;
+   (ou force a rota dinâmica com export const dynamic = 'force-dynamic').</pre>
+<div class="warning"><strong>Outro clássico:</strong> o fallback nunca aparece e a página trava em branco. Quase sempre o componente "lento" na verdade <strong>lançou um erro</strong> (fetch fora do ar, JSON inválido) e não suspendeu — o erro sobe para o <code>error.jsx</code> mais próximo. Verifique o network e o <code>try/catch</code> dentro do componente async:</div>
+<pre class="out">Error: Failed to fetch `https://api-quebrada…` → Unhandled Runtime Error
+→ trate no componente: try { … } catch { return &lt;p&gt;Não consegui carregar.&lt;/p&gt; }</pre>
+<h2>Exercícios</h2>
+<div class="mc" data-answer="2"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">Com streaming + Suspense, o que o navegador recebe primeiro?</p><label><input type="radio" name="q1">O HTML inteiro, só depois de todos os dados</label><label><input type="radio" name="q1">O shell rápido da página; as partes suspensas entram depois no lugar reservado</label><label><input type="radio" name="q1">Somente um JSON com todos os dados</label></div>
+<div class="mc" data-answer="1"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">O arquivo <code>app/dashboard/loading.jsx</code> serve para:</p><label><input type="radio" name="q2">Mostrar um fallback automático enquanto o segmento <code>/dashboard</code> carrega</label><label><input type="radio" name="q2">Definir o título da aba do navegador</label><label><input type="radio" name="q2">Cachear o dashboard no navegador</label></div>
+<div class="mc" data-answer="3"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">Qual componente pode ser <code>async</code> e suspende dentro de um Suspense?</p><label><input type="radio" name="q3">Qualquer <code>&lt;div&gt;</code></label><label><input type="radio" name="q3">Um componente de cliente com <code>useState</code></label><label><input type="radio" name="q3">Um Server Component com <code>await fetch(...)</code> dentro</label></div>
+<div class="exercise" data-answer="&lt;p&gt;Carregando…&lt;/p&gt;"><p>Complete o fallback do Suspense:</p><div class="ex-code">&lt;Suspense fallback={<input class="ex-input" autocomplete="off" spellcheck="false" autocapitalize="off">&gt;}&gt;</div><div class="ex-actions"><button type="button">Verificar</button><span class="ex-result" aria-live="polite"></span></div></div>
+<div class="exercise" data-answer="loading.jsx"><p>Complete o nome do arquivo de loading do segmento:</p><div class="ex-code">app/dashboard/<input class="ex-input" autocomplete="off" spellcheck="false" autocapitalize="off"> </div><div class="ex-actions"><button type="button">Verificar</button><span class="ex-result" aria-live="polite"></span></div></div>
+<div class="pager"></div>
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

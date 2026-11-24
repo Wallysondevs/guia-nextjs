@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Domínio próprio na Vercel: DNS, SSL e www | Guia Next.js</title>
+<meta name="description" content="Troque o endereço meusite.vercel.app pelo seu domínio próprio (meudominio.com.br): adicione o domínio na Vercel, aponte o DNS (registro A para o raiz, CNAME para www), espere a propagação e receba o certificado SSL automático.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+<div class="pager"></div>
+<h1>Domínio próprio: de meusite.vercel.app para meudominio.com.br</h1>
+<p class="intro">O endereço <code>meu-app.vercel.app</code> serve para testar, mas a loja da Ana precisava de <strong>endereço próprio</strong> no letreiro: <code>lojinha.com.br</code>. Nesta aula você aprende a apontar um domínio comprado (Registro.br, GoDaddy…) para o projeto na Vercel: adicionar o domínio no painel, configurar o DNS (A + CNAME), esperar a propagação e receber o <strong>SSL automático</strong> (cadeado verde).</p>
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>Comprar o domínio num registrador (Registro.br, Hostinger, GoDaddy, Cloudflare…)</li>
+<li>Adicionar o domínio em Vercel → Project → Settings → Domains</li>
+<li>Configurar DNS: registro <code>A</code> no raiz (<code>@</code>) → <code>76.76.21.21</code> e <code>CNAME</code> em <code>www</code> → <code>cname.vercel-dns.com</code></li>
+<li>Propagação de DNS (de minutos a 48h) e como testar com <code>dig</code>/<code>nslookup</code></li>
+<li>SSL automático (Let's Encrypt) e redirect de <code>www</code> ↔ raiz</li>
+<li>Domínio em múltiplos projetos e o apex (raiz) vs subdomínio</li>
+</ul></div>
+<hr>
+<h2>A ideia: trocar a placa da loja</h2>
+<p>O <code>vercel.app</code> é como uma <strong>placa provisória</strong> que a prefeitura empresta: funciona, mas não é seu endereço. Comprar o domínio é registrar o endereço no cartório (o <em>registrador</em> — Registro.br para .br): lá você diz "esse nome é meu". Depois, você precisa <strong>apontar a placa para a loja certa</strong>: isso é o DNS, o "GPS da internet" — você configura no painel do registrador para onde o nome manda (no caso, para os servidores da Vercel).</p>
+<p> existem dois tipos de registro que interessam: o <strong>A</strong> (endereço numérico) para o domínio "raiz" (<code>lojinha.com.br</code>, também chamado <em>apex</em>) apontando para o IP da Vercel, e o <strong>CNAME</strong> (apelido) para o <code>www</code> (<code>www.lojinha.com.br</code>) apontando para <code>cname.vercel-dns.com</code>. Quando o DNS propaga, o pedido bate na Vercel, que reconhece o domínio, entrega o app e emite o <strong>certificado SSL</strong> sozinho (Let's Encrypt) — o cadeado verde aparece sem você mexer em nada.</p>
+<h2>Passo a passo</h2>
+<pre class="file" data-file="1) comprar e registrar o domínio">Registro.br (para .com.br):
+  1. crie conta → "Registrar domínio" → pesquise lojinha.com.br
+  2. pague a anuidade → vire o dono (CPF/CNPJ no WHOIS)
+  3. no painel do Registro.br: Servidores DNS → use os da Vercel
+     (ou mantenha os do registrador e crie os registros abaixo)</pre>
+<pre class="file" data-file="2) adicionar o domínio na Vercel">Vercel → seu projeto → Settings → Domains → Add
+  → digite lojinha.com.br  → Add
+  → adicione também www.lojinha.com.br
+  → a Vercel mostra "Valid Configuration" quando o DNS estiver certo</pre>
+<pre class="file" data-file="3) configurar o DNS no registrador">Tipo   Nome     Valor
+A      @        76.76.21.21          ← raiz (apex) vai para a Vercel
+CNAME  www      cname.vercel-dns.com  ← www é apelido da Vercel
+(TTL padrão: 3600 — pode deixar; menor = propaga mais rápido)</pre>
+<pre class="file" data-file="terminal"># testar a propagação antes de believe:
+dig lojinha.com.br +short        # deve devolver 76.76.21.21
+dig www.lojinha.com.br +short    # deve devolver cname.vercel-dns.com.
+nslookup lojinha.com.br
+
+# forçar DNS local (teste): edite /etc/hosts
+127.0.0.1  lojinha.com.br   # (só no seu PC, para testar)</pre>
+<pre class="out">Vercel → Domains:
+  lojinha.com.br      ✅ Valid Configuration   🔒 SSL ativo (Let's Encrypt)
+  www.lojinha.com.br  ✅ Valid Configuration   🔒 SSL ativo
+  → a Vercel redireciona www → raiz (ou o contrário) automaticamente</pre>
+<h2>Subdomínios e vários projetos</h2>
+<pre class="file" data-file="exemplos de DNS para um mesmo domínio">blog.lojinha.com.br    CNAME  cname.vercel-dns.com   → projeto do blog
+app.lojinha.com.br     CNAME  cname.vercel-dns.com   → projeto do app (dashboard)
+lojinha.com.br         A      76.76.21.21             → projeto principal (site)</pre>
+<div class="tryreact" data-goal="https"><p class="try-task"><strong>Missão:</strong> o componente abaixo monta o endereço do site a partir de um texto digitado, mas esquece o <strong>protocolo</strong>. Complete a constante <code>const PROTOCOLO = '___'</code> com <code>https://</code> — sem ele o link vira busca no Google em vez de abrir o site. Rode digitando <code>lojinha.com.br</code> e veja o link ficar clicável. Depois clique em <em>Verificar missão</em>.</p><pre class="script" data-file="App.jsx">const PROTOCOLO = ''; // TODO: 'https://'
+
+function App() {
+  const [dominio, setDominio] = React.useState('lojinha.com.br');
+  const url = PROTOCOLO + dominio;
+  return (
+    &lt;div&gt;
+      &lt;h1&gt;🌐 Meu domínio&lt;/h1&gt;
+      &lt;input value={dominio} onChange={e =&gt; setDominio(e.target.value)} /&gt;
+      &lt;p&gt;Endereço final: &lt;a href={url}&gt;{url}&lt;/a&gt;&lt;/p&gt;
+      &lt;p&gt;{PROTOCOLO ? '✅ link clicável (https)' : '❌ sem protocolo: vira busca no Google'}&lt;/p&gt;
+    &lt;/div&gt;
+  );
+}</pre><pre class="solucao" data-file="App.jsx">const PROTOCOLO = 'https://';
+
+function App() {
+  const [dominio, setDominio] = React.useState('lojinha.com.br');
+  const url = PROTOCOLO + dominio;
+  return (
+    &lt;div&gt;
+      &lt;h1&gt;🌐 Meu domínio&lt;/h1&gt;
+      &lt;input value={dominio} onChange={e =&gt; setDominio(e.target.value)} /&gt;
+      &lt;p&gt;Endereço final: &lt;a href={url}&gt;{url}&lt;/a&gt;&lt;/p&gt;
+      &lt;p&gt;{PROTOCOLO ? '✅ link clicável (https)' : '❌ sem protocolo: vira busca no Google'}&lt;/p&gt;
+    &lt;/div&gt;
+  );
+}</pre></div>
+<figure class="tela"><img src="assets/telas/n3-dominio.png" alt="Domínio próprio configurado com DNS e SSL na Vercel" width="1280" height="800" loading="lazy"><figcaption>Domínio adicionado na Vercel com configuração de DNS válida e certificado SSL automático.</figcaption></figure>
+<h2>Quando dá errado</h2>
+<div class="warning"><strong>Erro real:</strong> depois de configurar o DNS, a Vercel mostra <em>"Invalid Configuration"</em> e o navegador diz <code>DNS_PROBE_POSSIBLE</code> / "não foi possível acessar esse site". Quase sempre é propagação — o DNS ainda não chegou no seu provedor. Teste com <code>dig</code> e espere (até 48h, geralmente minutos):</div>
+<pre class="out">$ dig lojinha.com.br +short
+(empty)  ← ainda não propagou
+$ dig lojinha.com.br +short
+76.76.21.21  ← propagou! já abre no navegador</pre>
+<div class="warning"><strong>Outro clássico:</strong> configurou CNAME no domínio raiz (<code>@</code>). Segundo o padrão DNS, o apex não aceita CNAME — use o registro <strong>A</strong> com o IP <code>76.76.21.21</code>. E se o registrador não deixa mexer no DNS do apex, troque os <em>nameservers</em> para os da Vercel (<code>ns1.vercel-dns.com</code>, <code>ns2.vercel-dns.com</code>) ou use um registrador com ALIAS/ANAME (Cloudflare).</div>
+<pre class="out">Vercel: "Invalid Configuration" em lojinha.com.br
+Esperado: A @ → 76.76.21.21   (CNAME no apex não vale)</pre>
+<h2>Exercícios</h2>
+<div class="mc" data-answer="2"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">Para o domínio raiz (<code>lojinha.com.br</code>, o apex) apontar para a Vercel, usa-se:</p><label><input type="radio" name="q1">Registro CNAME no <code>@</code></label><label><input type="radio" name="q1">Registro <code>A</code> no <code>@</code> com o IP <code>76.76.21.21</code></label><label><input type="radio" name="q1">Registro MX</label></div>
+<div class="mc" data-answer="1"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">O subdomínio <code>www</code> normalmente aponta para a Vercel com:</p><label><input type="radio" name="q2">CNAME → <code>cname.vercel-dns.com</code></label><label><input type="radio" name="q2">A → 127.0.0.1</label><label><input type="radio" name="q2">TXT → qualquer texto</label></div>
+<div class="mc" data-answer="3"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">O cadeado verde (HTTPS) no domínio próprio na Vercel vem de:</p><label><input type="radio" name="q3">Você comprar um certificado</label><label><input type="radio" name="q3">Um plugin</label><label><input type="radio" name="q3">Certificado SSL automático (Let's Encrypt), emitido pela própria Vercel</label></div>
+<div class="exercise" data-answer="dig"><p>Complete o comando que consulta o DNS de um domínio:</p><div class="ex-code"><input class="ex-input" autocomplete="off" spellcheck="false" autocapitalize="off"> lojinha.com.br +short</div><div class="ex-actions"><button type="button">Verificar</button><span class="ex-result" aria-live="polite"></span></div></div>
+<div class="exercise" data-answer="76.76.21.21"><p>Complete o IP de destino do registro A (apex) da Vercel:</p><div class="ex-code">A  @  <input class="ex-input" autocomplete="off" spellcheck="false" autocapitalize="off"></div><div class="ex-actions"><button type="button">Verificar</button><span class="ex-result" aria-live="polite"></span></div></div>
+<div class="pager"></div>
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

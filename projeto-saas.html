@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projeto: SaaS básico (auth + banco + assinatura) | Guia Next.js</title>
+<meta name="description" content="Projeto guiado: um SaaS mínimo em Next.js com Auth.js (login por e-mail/GitHub), banco com Prisma (SQLite em dev, Postgres na Vercel), planos free/pro e assinatura via Stripe Billing Portal, protegido por middleware.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+<div class="pager"></div>
+<h1>Projeto: SaaS básico — auth, banco e assinatura</h1>
+<p class="intro">A Ana quer transformar o app dela num produto pago: cada usuário tem conta própria, dados no banco e um plano (grátis ou pro). Neste projeto você monta a base de um SaaS: <strong>Auth.js</strong> para login, <strong>Prisma</strong> para o banco (SQLite em dev, Postgres na Vercel), <strong>Stripe Billing</strong> para assinatura e <code>middleware</code> protegendo as rotas pagas.</p>
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>Auth.js (NextAuth v5): <code>auth.js</code> na raiz, rotas <code>/api/auth/[...nextauth]</code>, <code>auth()</code> no servidor</li>
+<li>Prisma: schema com User/Subscription, <code>prisma migrate dev</code>, cliente singleton</li>
+<li>Vercel Postgres (ou Neon/Supabase) e <code>DATABASE_URL</code> como secret</li>
+<li>Stripe Billing: produto/plano, checkout de assinatura e <strong>Billing Portal</strong> (cliente gerencia o cartão sozinho)</li>
+<li>Proteger rotas no middleware pela sessão e checar o plano dentro da página</li>
+</ul></div>
+<hr>
+<h2>A ideia: o clube com carteirinha e catraca</h2>
+<p>Um SaaS é como um clube: a <strong>catraca na porta</strong> é o login (só quem tem carteirinha entra — Auth.js guarda a sessão num cookie seguro), o <strong>arquivo de sócios</strong> é o banco de dados (Prisma guarda usuário, assinatura, pagamentos), e a <strong>área VIP</strong> é a rota paga, que só abre se o plano do sócio for "pro" (checado no servidor, nunca só no navegador). A mensalidade é cobrada pelo Stripe em modo <code>subscription</code>, e o próprio Stripe hospeda o portal onde o cliente troca o cartão e cancela — seu servidor só recebe o webhook avisando o que mudou.</p>
+<h2>Passo 1 — Auth.js (login) e Prisma (banco)</h2>
+<pre class="file" data-file="terminal">npm install next-auth@beta prisma @prisma/client
+npx prisma init --datasource sqlite   # em dev; em produção: Vercel Postgres (DATABASE_URL)</pre>
+<pre class="file" data-file="prisma/schema.prisma">generator client { provider = "prisma-client-js" }
+datasource db { provider = "postgresql"; url = env("DATABASE_URL") }
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  sub       Subscription?
+}
+
+model Subscription {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  plano     String   @default("free")     // "free" | "pro"
+  stripeCustomerId String?
+  stripeSubId      String?
+  status    String   @default("active")
+}</pre>
+<pre class="file" data-file="terminal">npx prisma migrate dev --name init
+# cria o banco e gera o cliente</pre>
+<pre class="file" data-file="auth.js">import NextAuth from 'next-auth';
+import GitHub from 'next-auth/providers/github';
+import { PrismaAdapter } from '@auth/prisma-adapter';
+import { prisma } from '@/lib/prisma';
+
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  adapter: PrismaAdapter(prisma),
+  providers: [GitHub], // também: Credentials, Google…
+});
+// AUTH_SECRET vai no .env.local (gere com: npx auth secret)</pre>
+<pre class="file" data-file="app/api/auth/[...nextauth]/route.js">import { handlers } from '@/auth';
+export const { GET, POST } = handlers; // /api/auth/signin, /api/auth/callback/github…</pre>
+<pre class="file" data-file="lib/prisma.js">import { PrismaClient } from '@prisma/client';
+const globalForPrisma = globalThis;
+export const prisma = globalForPrisma.prisma ?? new PrismaClient();
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma; // evita recriar em dev</pre>
+<h2>Passo 2 — proteger rotas e ler a sessão no servidor</h2>
+<pre class="file" data-file="middleware.js">export { auth as middleware } from '@/auth';
+// o Auth.js v5 protege tudo por padrão; para liberar páginas públicas use matcher:&lt;/n// export const config = { matcher: ['/((?!api|_next/static|_next/image|login|cadastro).*)'] };</pre>
+<pre class="file" data-file="app/dashboard/page.jsx">import { auth } from '@/auth';
+import { redirect } from 'next/navigation';
+import { prisma } from '@/lib/prisma';
+
+export default async function Dashboard() {
+  const session = await auth();
+  if (!session?.user) redirect('/api/auth/signin'); // o middleware já barra, aqui é redundância segura
+
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+    include: { sub: true },
+  });
+
+  const plano = user?.sub?.plano || 'free';
+  return (
+    &lt;main&gt;
+      &lt;h1&gt;👋 Olá, {session.user.name}&lt;/h1&gt;
+      &lt;p&gt;Seu plano: &lt;strong&gt;{plano}&lt;/strong&gt;&lt;/p&gt;
+      {plano === 'free' &amp;&amp; &lt;BannerUpgrade /&gt;}
+      {plano === 'pro' ? &lt;AreaPro /&gt; : &lt;AreaFree /&gt;}
+    &lt;/main&gt;
+  );
+}</pre>
+<h2>Passo 3 — assinatura com Stripe (modo subscription + portal)</h2>
+<pre class="file" data-file="app/upgrade/actions.js">'use server';
+
+import Stripe from 'stripe';
+import { auth } from '@/auth';
+import { prisma } from '@/lib/prisma';
+import { redirect } from 'next/navigation';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+export async function assinarPro() {
+  const session = await auth();
+  if (!session?.user?.email) return;
+
+  let user = await prisma.user.findUnique({ where: { email: session.user.email }, include: { sub: true } });
+
+  // cria (ou reutiliza) o customer no Stripe
+  if (!user.sub?.stripeCustomerId) {
+    const customer = await stripe.customers.create({ email: user.email, name: user.name ?? undefined });
+    user = await prisma.user.update({
+      where: { email: user.email },
+      data: { sub: { upsert: { create: { stripeCustomerId: customer.id }, update: { stripeCustomerId: customer.id } } } },
+      include: { sub: true },
+    });
+  }
+
+  // sessão de checkout no modo assinatura (price_… criado no painel do Stripe)
+  const checkout = await stripe.checkout.sessions.create({
+    mode: 'subscription',
+    customer: user.sub.stripeCustomerId,
+    line_items: [{ price: process.env.STRIPE_PRICE_PRO, quantity: 1 }],
+    success_url: `${process.env.NEXT_PUBLIC_URL}/dashboard?ass=ok`,
+    cancel_url: `${process.env.NEXT_PUBLIC_URL}/dashboard`,
+  });
+  redirect(checkout.url);
+}
+
+export async function abrirPortal() {
+  const session = await auth();
+  const user = await prisma.user.findUnique({ where: { email: session?.user?.email }, include: { sub: true } });
+  const portal = await stripe.billingPortal.sessions.create({
+    customer: user.sub.stripeCustomerId,
+    return_url: `${process.env.NEXT_PUBLIC_URL}/dashboard`,
+  });
+  redirect(portal.url); // página hospedada do Stripe: trocar cartão, cancelar…
+}</pre>
+<pre class="file" data-file="app/api/stripe/webhook/route.js">import Stripe from 'stripe';
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+export async function POST(req) {
+  const event = stripe.webhooks.constructEvent(
+    await req.text(),
+    req.headers.get('stripe-signature'),
+    process.env.STRIPE_WEBHOOK_SECRET,
+  );
+
+  if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {
+    const sub = event.data.object;
+    const plano = sub.status === 'active' ? 'pro' : 'free';
+    await prisma.subscription.update({
+      where: { stripeSubId: sub.id },
+      data: { plano, status: sub.status },
+    });
+    console.log('plano atualizado →', plano);
+  }
+  return NextResponse.json({ received: true });
+}</pre>
+<pre class="file" data-file=".env.local">DATABASE_URL="postgresql://…"        # Vercel Postgres / Neon
+AUTH_SECRET="gere com: npx auth secret"
+AUTH_GITHUB_ID=…
+AUTH_GITHUB_SECRET=…
+STRIPE_SECRET_KEY=sk_test_…
+STRIPE_PRICE_PRO=price_…
+STRIPE_WEBHOOK_SECRET=whsec_…
+NEXT_PUBLIC_URL=http://localhost:3000</pre>
+<figure class="tela"><img src="assets/telas/proj-saas.png" alt="SaaS com login, plano free/pro e assinatura Stripe" width="1280" height="800" loading="lazy"><figcaption>Login com Auth.js, plano do usuário lido no banco via Prisma e upgrade/gerenciar assinatura pelo Stripe.</figcaption></figure>
+<div class="tryreact" data-goal="plano"><p class="try-task"><strong>Missão:</strong> no componente abaixo, a área VIP está liberada para qualquer um. Complete a condição para só mostrar a área pro quando <code>usuario.plano === 'pro'</code>: use <code>{usuario.plano === 'pro' && &lt;AreaPro /&gt;}</code>. Rode e clique em <em>Verificar missão</em>.</p><pre class="script" data-file="app/dashboard/page.jsx">function AreaPro() { return &lt;p&gt;🚀 Área PRO liberada (dados avançados)&lt;/p&gt;; }
+
+function App() {
+  const usuario = { nome: 'Ana', plano: 'free' }; // mude para 'pro' para testar
+  return (
+    &lt;div&gt;
+      &lt;h1&gt;👋 Olá, {usuario.nome}&lt;/h1&gt;
+      &lt;p&gt;Plano: {usuario.plano}&lt;/p&gt;
+      {/* TODO: {usuario.plano === 'pro' &amp;&amp; &lt;AreaPro /&gt;} */}
+    &lt;/div&gt;
+  );
+}</pre><pre class="solucao" data-file="app/dashboard/page.jsx">function AreaPro() { return &lt;p&gt;🚀 Área PRO liberada (dados avançados)&lt;/p&gt;; }
+
+function App() {
+  const usuario = { nome: 'Ana', plano: 'free' };
+  return (
+    &lt;div&gt;
+      &lt;h1&gt;👋 Olá, {usuario.nome}&lt;/h1&gt;
+      &lt;p&gt;Plano: {usuario.plano}&lt;/p&gt;
+      {usuario.plano === 'pro' &amp;&amp; &lt;AreaPro /&gt;}
+    &lt;/div&gt;
+  );
+}</pre></div>
+<h2>Quando dá errado</h2>
+<div class="warning"><strong>Erro real de deploy:</strong> o build passa, mas a primeira página dá erro porque <code>DATABASE_URL</code> não existe na Vercel. Prisma precisa da variável <strong>no build</strong> (para gerar o cliente) e em runtime:</div>
+<pre class="out">PrismaClientInitializationError: error: Environment variable not found: DATABASE_URL.
+→ Vercel → Settings → Environment Variables → adicione DATABASE_URL (Production)
+→ rode `npx prisma migrate deploy` (ou `prisma db push`) contra o banco de produção</pre>
+<div class="warning"><strong>Outro clássico:</strong> webhook do Stripe llegando com assinatura inválida em produção porque o <code>STRIPE_WEBHOOK_SECRET</code> é o do <em>modo teste</em> e o evento veio do modo real (ou vice-versa). Separe os secrets por ambiente e confirme no log do Stripe.</div>
+<pre class="out">Webhook signature verification failed → 400
+→ confira STRIPE_WEBHOOK_SECRET (whsec_…) e se o endpoint é o da branch certa</pre>
+<h2>Exercícios</h2>
+<div class="mc" data-answer="2"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">No Auth.js v5, a sessão no servidor é lida com:</p><label><input type="radio" name="q1"><code>useSession()</code> (isso é no cliente)</label><label><input type="radio" name="q1"><code>const session = await auth()</code> em Server Component / Server Action</label><label><input type="radio" name="q1"><code>localStorage</code></label></div>
+<div class="mc" data-answer="1"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">O plano "pro" do usuário deve ser checado:</p><label><input type="radio" name="q2">No servidor (banco), porque o que está no navegador pode ser forjado</label><label><input type="radio" name="q2">Só no CSS (esconder o botão)</label><label><input type="radio" name="q2">Num cookie público</label></div>
+<div class="mc" data-answer="3"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">O Billing Portal do Stripe serve para:</p><label><input type="radio" name="q3">Hospedar o login do app</label><label><input type="radio" name="q3">O dashboard do seu app</label><label><input type="radio" name="q3">O cliente trocar o cartão, mudar de plano e cancelar sozinho, numa página hospedada pelo Stripe</label></div>
+<div class="exercise" data-answer="auth"><p>Complete a leitura da sessão no servidor (Auth.js v5):</p><div class="ex-code">const session = await <input class="ex-input" autocomplete="off" spellcheck="false" autocapitalize="off">()</div><div class="ex-actions"><button type="button">Verificar</button><span class="ex-result" aria-live="polite"></span></div></div>
+<div class="exercise" data-answer="subscription"><p>Complete o modo de checkout para <strong>assinatura</strong> (recorrente):</p><div class="ex-code">stripe.checkout.sessions.create({ mode: '<input class="ex-input" autocomplete="off" spellcheck="false" autocapitalize="off">' … })</div><div class="ex-actions"><button type="button">Verificar</button><span class="ex-result" aria-live="polite"></span></div></div>
+<div class="pager"></div>
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

@@ -1,0 +1,148 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Formulários completos com Server Action | Guia Next.js</title><meta name="description" content="Monte um formulário completo no Next.js: validação no servidor dentro da Server Action, useActionState para devolver erros por campo, useFormStatus para o botão pending e revalidatePath ao final.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
+<div class="pager"></div>
+<h1>Formulário completo com Server Action</h1>
+<p class="intro">A Ana 👩‍💻 fez a página de contato dela: nome, e-mail e mensagem. Ela queria que, ao enviar vazio, cada campo mostrasse o erro <strong>ao lado dele</strong>, sem perder o que já foi digitado, e que o botão virasse "Enviando…" enquanto a action rodava no servidor. Nesta página você monta esse formulário inteiro, do zero ao deploy mental.</p>
+<div class="note"><strong>Você vai aprender</strong><ul><li>Separar a action em arquivo próprio (<code>actions.js</code>) e a validação dentro dela</li><li>Devolver um objeto de erros por campo: <code>{ erros: { nome: "…" } }</code></li><li><code>useActionState</code> ligando o formulário à action</li><li>Manter os valores digitados com <code>defaultValue</code> + estado</li><li><code>useFormStatus</code> no botão filho + <code>revalidatePath</code> no fim</li></ul></div>
+<hr><h2>A ideia: o check-in de aeroporto com bilete de erro por campo</h2>
+<p>No check-in de aeroporto, o atendente confere cada documento na hora: passaporte? bagagem? passagem? Se falta alguma coisa, ele devolve <strong>aquele item específico</strong> com uma etiqueta de erro — você não perde os outros documentos, só corrige o que falta. A Server Action de formulário funciona igual: ela valida campo por campo no servidor e devolve um objeto <code>erros</code> com uma chave por campo. O cliente não revalida nada — a lógica pesada fica no servidor, onde mora o banco.</p>
+<p>E por que o que você digitou não some? Porque o formulário é reenviado pelo navegador com os valores, e você reaplica com <code>defaultValue</code> vindo do estado. Já o botão "Enviando…" é pura leitura: o <code>useFormStatus</code>, num componente filho do <code>&lt;form&gt;</code>, enxerga o <code>pending</code> do envio e troca o texto do botão sozinho.</p>
+<p>Fluxo completo: <code>submit</code> → navegador faz POST para a action → action valida → devolve <code>{ ok, erros }</code> → <code>useActionState</code> guarda isso no <code>state</code> → a página re-renderiza mostrando os erros ao lado dos campos → se deu certo, a action chama <code>revalidatePath</code> e <code>redirect</code>.</p>
+<h2>A action com validação (lado do servidor)</h2>
+<pre class="file" data-file="app/contato/actions.js">"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+
+export async function enviarMensagem(estadoAnterior, formData) {
+  const nome = String(formData.get("nome") || "").trim();
+  const email = String(formData.get("email") || "").trim();
+  const mensagem = String(formData.get("mensagem") || "").trim();
+
+  // validação no servidor — o cliente não manda regra nenhuma
+  const erros = {};
+  if (nome.length < 3) erros.nome = "Nome precisa de 3+ letras";
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) erros.email = "E-mail inválido";
+  if (mensagem.length < 10) erros.mensagem = "Mensagem muito curta (mín. 10)";
+
+  if (Object.keys(erros).length > 0) {
+    return { ok: false, erros, valores: { nome, email, mensagem } };
+  }
+
+  await db.mensagem.create({ nome, email, mensagem });
+  revalidatePath("/contato");
+  redirect("/contato?enviado=1"); // ou retorne { ok: true } e deixe na página
+}</pre>
+<h2>O formulário no cliente</h2>
+<pre class="file" data-file="app/contato/ContatoForm.jsx">"use client";
+
+import { useActionState } from "react";
+import { useFormStatus } from "react-dom";
+import { enviarMensagem } from "./actions";
+
+function BotaoEnviar() {
+  const { pending } = useFormStatus();
+  return (
+    &lt;button type="submit" disabled={pending}&gt;
+      {pending ? "Enviando… ⏳" : "Enviar mensagem"}
+    &lt;/button&gt;
+  );
+}
+
+export default function ContatoForm() {
+  const [state, formAction] = useActionState(enviarMensagem, {
+    ok: false, erros: {}, valores: { nome: "", email: "", mensagem: "" },
+  });
+
+  return (
+    &lt;form action={formAction}&gt;
+      &lt;div&gt;
+        &lt;input name="nome" placeholder="Seu nome"
+               defaultValue={state.valores.nome} /&gt;
+        {state.erros.nome && &lt;small&gt;{state.erros.nome}&lt;/small&gt;}
+      &lt;/div&gt;
+      &lt;div&gt;
+        &lt;input name="email" placeholder="seu@email.com"
+               defaultValue={state.valores.email} /&gt;
+        {state.erros.email && &lt;small&gt;{state.erros.email}&lt;/small&gt;}
+      &lt;/div&gt;
+      &lt;div&gt;
+        &lt;textarea name="mensagem" placeholder="Sua mensagem…"
+                  defaultValue={state.valores.mensagem} /&gt;
+        {state.erros.mensagem && &lt;small&gt;{state.erros.mensagem}&lt;/small&gt;}
+      &lt;/div&gt;
+      &lt;BotaoEnviar /&gt;
+      {state.ok && &lt;p&gt;Mensagem enviada! 🎉&lt;/p&gt;}
+    &lt;/form&gt;
+  );
+}</pre>
+<p>Pontos finos: o <code>defaultValue</code> (não <code>value</code>) deixa o input editável e repõe o que a pessoa digitou quando a action devolve <code>valores</code>; o <code>BotaoEnviar</code> precisa ser filho do form para o <code>useFormStatus</code> funcionar; e a action recebe <strong>dois</strong> argumentos por causa do <code>useActionState</code>: o estado anterior e o <code>formData</code>.</p>
+<table class="ref">
+<tr><th>Peça</th><th>Papel no formulário</th></tr>
+<tr><td><code>useActionState(action, inicial)</code></td><td>liga o form à action; devolve <code>[state, formAction, pending]</code></td></tr>
+<tr><td><code>action(estadoAnterior, formData)</code></td><td>assinatura da action ligada ao useActionState</td></tr>
+<tr><td><code>form action={formAction}</code></td><td>envia o POST para a action (sem JS extra)</td></tr>
+<tr><td><code>useFormStatus()</code> (no filho do form)</td><td>dá <code>{ pending }</code> para o botão</td></tr>
+<tr><td><code>defaultValue={state.valores.campo}</code></td><td>repõe o digitado quando volta erro</td></tr>
+<tr><td><code>revalidatePath</code> + <code>redirect</code> na action</td><td>atualiza a página e navega depois de salvar</td></tr>
+</table>
+<div class="tryreact" data-goal="erros|erro"><p class="try-task"><strong>Missão:</strong> simule a validação do servidor no navegador: a função <code>validar</code> deve devolver um objeto <code>erros</code> vazio quando o nome tem 3+ letras, ou <code>{ nome: "Nome precisa de 3+ letras" }</code> quando não tem. Escreva no campo e rode.</p><pre class="script" data-file="App.jsx">function App() {
+  const [nome, setNome] = React.useState("");
+  const [erros, setErros] = React.useState({});
+
+  // 👉 validação "no servidor": devolve { nome: "…" } se curto demais
+  function validar() {
+    setErros({});
+  }
+
+  return (
+    &lt;div style={{ fontFamily: "sans-serif", padding: 16 }}&gt;
+      &lt;input
+        placeholder="Seu nome"
+        value={nome}
+        onChange={(e) => setNome(e.target.value)}
+      /&gt;
+      &lt;button onClick={validar}&gt;Validar&lt;/button&gt;
+      {erros.nome && &lt;small style={{ color: "red" }}&gt;{erros.nome}&lt;/small&gt;}
+      {!erros.nome && nome && &lt;p&gt;Nome ok ✔&lt;/p&gt;}
+    &lt;/div&gt;
+  );
+}</pre><pre class="solucao" data-file="App.jsx">function App() {
+  const [nome, setNome] = React.useState("");
+  const [erros, setErros] = React.useState({});
+
+  function validar() {
+    if (nome.trim().length < 3) {
+      setErros({ nome: "Nome precisa de 3+ letras" });
+    } else {
+      setErros({});
+    }
+  }
+
+  return (
+    &lt;div style={{ fontFamily: "sans-serif", padding: 16 }}&gt;
+      &lt;input
+        placeholder="Seu nome"
+        value={nome}
+        onChange={(e) => setNome(e.target.value)}
+      /&gt;
+      &lt;button onClick={validar}&gt;Validar&lt;/button&gt;
+      {erros.nome && &lt;small style={{ color: "red" }}&gt;{erros.nome}&lt;/small&gt;}
+      {!erros.nome && nome && &lt;p&gt;Nome ok ✔&lt;/p&gt;}
+    &lt;/div&gt;
+  );
+}</pre></div>
+<figure class="tela"><img src="assets/telas/formularios-actions.png" alt="Formulário de contato com useActionState, erros por campo e botão Enviando…" width="1280" height="800" loading="lazy"><figcaption>A action valida no servidor e devolve <code>erros</code> por campo; o <code>useActionState</code> mostra cada erro ao lado do input, e o botão sente o <code>pending</code> sozinho.</figcaption></figure>
+<h2>Quando dá errado</h2>
+<div class="warning"><strong>Erro:</strong> usar <code>useFormStatus</code> no mesmo componente do <code>&lt;form&gt;</code> — ele não enxerga o próprio form:</div>
+<pre class="out">Error: useFormStatus must be used inside a component rendered within a &lt;form&gt;.
+// pending fica sempre false e o botão nunca muda para "Enviando…"</pre>
+<p>Tradução: o <code>useFormStatus</code> precisa estar num componente <strong>filho</strong> do formulário. <strong>Correção:</strong> extraia o botão para um componente separado (como o <code>BotaoEnviar</code> acima) e renderize ele dentro do <code>&lt;form&gt;</code>. Outro erro comum: usar <code>value</code> no input controlado sem <code>onChange</code>, ou esquecer que a action do <code>useActionState</code> recebe o estado anterior como 1º argumento — se você declarar <code>async function enviar(formData)</code> e ligar no <code>useActionState</code>, o <code>formData</code> vira o estado anterior e dá <code>formData.get is not a function</code>.</p>
+<h2>Exercícios</h2>
+<div class="mc" data-answer="1"><p class="mc-q">1. Numa action ligada ao <code>useActionState</code>, qual a assinatura correta?</p><label><input type="radio"><code>async function enviar(formData)</code></label><label><input type="radio"><code>async function enviar(estadoAnterior, formData)</code></label><label><input type="radio"><code>async function enviar(state, action)</code></label><label><input type="radio"><code>async function enviar(props)</code></label><p class="mc-feedback"></p></div>
+<div class="mc" data-answer="3"><p class="mc-q">2. Onde o <code>useFormStatus()</code> precisa estar para dar acesso ao <code>pending</code>?</p><label><input type="radio">Em qualquer lugar da página</label><label><input type="radio">No layout raiz</label><label><input type="radio">Num componente filho do <code>&lt;form&gt;</code></label><label><input type="radio">Dentro da própria Server Action</label><p class="mc-feedback"></p></div>
+<div class="exercise" data-regex="defaultValue=\{state\.valores\.nome\}"><p><strong>3. Complete:</strong> para repor o valor digitado depois que a action devolveu erro, qual atributo você usa no input (e não <code>value</code>)?</p><div class="ex-code"><input class="ex-input" type="text" placeholder="escreva aqui…" style="width:100%"></div><div class="ex-actions"><button type="button">Verificar</button></div><p class="ex-result"></p></div>
+<div class="pager"></div></div></main></div><script src="assets/site.js"></script></body></html>

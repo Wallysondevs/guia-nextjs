@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SSR, SSG e ISR: quando o HTML nasce | Guia Next.js</title>
+<meta name="description" content="As três formas de o Next.js gerar páginas: SSR (HTML novo a cada pedido), SSG (gerado uma vez no build) e ISR (estático que se recria sozinho). Veja export const dynamic, revalidate, cache do fetch e generateStaticParams.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+<div class="pager"></div>
+<h1>SSR, SSG e ISR: quando o HTML nasce</h1>
+<p class="intro">Até aqui a Ana achava que "página" era um arquivo HTML pronto na pasta. No Next.js a página pode <strong>nascer na hora do pedido</strong>, <strong>nascer uma vez no build</strong> ou <strong>nascer estática e se renovar sozinha</strong> — três ritmos diferentes para a mesma tela. Nesta aula você aprende a escolher o ritmo certo para cada página do app dela.</p>
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>SSR (dinâmica): o servidor monta o HTML <strong>a cada pedido</strong> — <code>export const dynamic = 'force-dynamic'</code> e <code>fetch(..., { cache: 'no-store' })</code></li>
+<li>SSG (estática): o HTML é gerado <strong>uma vez, no build</strong> — o padrão quando dá para</li>
+<li>ISR: estática, mas o servidor <strong>recria a página sozinha</strong> depois de <code>export const revalidate = 60</code> segundos</li>
+<li><code>generateStaticParams()</code> para gerar as rotas dinâmicas <code>[slug]</code> no build</li>
+<li>O que o <code>fetch</code> cacheia por padrão no App Router (diferente do React puro!)</li>
+</ul></div>
+<hr>
+<h2>A ideia: o restaurante da esquina</h2>
+<p>Imagine o restaurante da esquina da Ana. Alguns pratos são <strong>feitos na hora</strong>: o cliente pede, a cozinha prepara na hora e entrega fumegando — demora um pouco, mas sai sempre fresquinho. Isso é o <strong>SSR</strong> (<em>Server-Side Rendering</em>): cada pedido ao servidor vira um HTML novo, montado na hora, com os dados atuais (hora do servidor, usuário logado, carrinho). É perfeito para páginas que precisam parecer "vivas" em cada acesso.</p>
+<p>Outros pratos ficam <strong>prontos no freezer</strong>: foram preparados uma única vez (no build, quando o deploy foi feito) e são servidos instantaneamente a todo mundo, sempre iguais. Isso é o <strong>SSG</strong> (<em>Static Site Generation</em>): o HTML nasce uma vez e fica num CDN, servindo cópias idênticas em milissegundos. É perfeito para páginas que não mudam sozinhas — um blog, uma página Sobre, um catálogo.</p>
+<p>E existe o meio-termo, o prato que a cozinha <strong>retira do freezer e refaz de tempos em tempos</strong>: a primeira pessoa depois de 60 segundos recebe a versão nova, e ela fica no freezer de novo até a próxima fornada. Isso é o <strong>ISR</strong> (<em>Incremental Static Regeneration</em>): a página é estática (rápida), mas o servidor a recria em segundo plano quando o tempo <code>revalidate</code> passa. É o melhor dos dois mundos para notícias, preços e estoques que mudam de vez em quando.</p>
+<h2>Como o Next.js decide o ritmo</h2>
+<p>No App Router, a regra padrão é: <strong>se dá para gerar no build, o Next.js gera estático</strong>. O <code>fetch</code> dentro de um Server Component vem <strong>cacheado por padrão</strong> (diferente do React puro, onde cada fetch é novo) — ou seja, o padrão puxa para o SSG. Para forçar o SSR, existem duas portas: ler dados que só existem no pedido (<code>cookies()</code>, <code>headers()</code>, <code>searchParams</code>) ou declarar na rota:</p>
+<pre class="file" data-file="app/page.jsx">// app/page.jsx — HOME DINÂMICA (SSR): HTML novo a cada pedido
+export const dynamic = 'force-dynamic';
+
+async function getHoraAtual() {
+  const res = await fetch('https://worldtimeapi.org/api/timezone/America/Sao_Paulo', {
+    cache: 'no-store', // sem cache: busca nova a cada renderização
+  });
+  return res.json();
+}
+
+export default async function Home() {
+  const dados = await getHoraAtual();
+  return (
+    &lt;main&gt;
+      &lt;h1&gt;⏰ Agora no servidor: {dados.datetime}&lt;/h1&gt;
+      &lt;p&gt;Recarregue a página: a hora muda a cada acesso (isso é SSR).&lt;/p&gt;
+    &lt;/main&gt;
+  );
+}</pre>
+<pre class="file" data-file="app/blog/page.jsx">// app/blog/page.jsx — LISTA DE POSTS ESTÁTICA (SSG): gerada uma vez no build
+async function getPosts() {
+  const res = await fetch('https://jsonplaceholder.typicode.com/posts');
+  // SEM cache: 'no-store' =&gt; o fetch fica cacheado e a página vira estática no build
+  return res.json();
+}
+
+export default async function Blog() {
+  const posts = await getPosts();
+  return (
+    &lt;main&gt;
+      &lt;h1&gt;📰 Blog&lt;/h1&gt;
+      &lt;ul&gt;{posts.slice(0, 5).map(p =&gt; &lt;li key={p.id}&gt;{p.title}&lt;/li&gt;)}&lt;/ul&gt;
+    &lt;/main&gt;
+  );
+}</pre>
+<pre class="file" data-file="app/noticias/page.jsx">// app/noticias/page.jsx — ISR: estática, mas recriada a cada 60 segundos
+export const revalidate = 60;
+
+async function getNoticias() {
+  const res = await fetch('https://jsonplaceholder.typicode.com/posts', {
+    next: { revalidate: 60 }, // o fetch também aceita revalidate (vem ganhando do route segment)
+  });
+  return res.json();
+}
+
+export default async function Noticias() {
+  const noticias = await getNoticias();
+  return &lt;main&gt;&lt;h1&gt;🗞️ Notícias (atualizadas a cada 60s)&lt;/h1&gt;&lt;/main&gt;;
+}</pre>
+<pre class="file" data-file="app/blog/[slug]/page.jsx">// app/blog/[slug]/page.jsx — rotas dinâmicas estáticas no build
+export async function generateStaticParams() {
+  const posts = await fetch('https://jsonplaceholder.typicode.com/posts').then(r =&gt; r.json());
+  return posts.slice(0, 10).map((p) =&gt; ({ slug: String(p.id) })); // /blog/1, /blog/2…
+}
+
+export const dynamicParams = false; // slugs fora da lista dão 404 (em vez de SSR na hora)
+
+export default async function Post({ params }) {
+  const { slug } = await params; // Next.js 15: params é uma Promise
+  return &lt;main&gt;&lt;h1&gt;Post #{slug}&lt;/h1&gt;&lt;/main&gt;;
+}</pre>
+<h2>Tabela rápida: qual escolher?</h2>
+<table class="ref"><thead><tr><th></th><th>SSR (dinâmico)</th><th>SSG (estático)</th><th>ISR (incremental)</th></tr></thead><tbody>
+<tr><td><strong>Quando o HTML nasce</strong></td><td>A cada pedido</td><td>Uma vez, no build</td><td>No build + recriado a cada <code>revalidate</code>s</td></tr>
+<tr><td><strong>Como declara</strong></td><td><code>export const dynamic = 'force-dynamic'</code> ou <code>cache: 'no-store'</code></td><td>É o padrão quando não há dados dinâmicos</td><td><code>export const revalidate = 60</code></td></tr>
+<tr><td><strong>Velocidade</strong></td><td>Tempo do servidor (TTFB maior)</td><td>Instantâneo (CDN)</td><td>Instantâneo, com construções novas em segundo plano</td></tr>
+<tr><td><strong>Use para</strong></td><td>Dashboard, carrinho, perfil logado</td><td>Blog, landing, docs, sobre</td><td>Notícias, preços, estoque, e-commerce</td></tr>
+</tbody></table>
+<div class="tryreact" data-goal="REVALIDATE = 60"><p class="try-task"><strong>Missão:</strong> a página abaixo está marcada como totalmente dinâmica (<code>MODE = 'no-store'</code>), igual a um prato feito na hora toda vez. Troque para o modo <strong>ISR</strong>: mude a constante para <code>const REVALIDATE = 60;</code> e use <code>MODE = REVALIDATE</code> na busca — assim a página fica estática no cache, mas se recria a cada 60 segundos. Depois clique em <em>Verificar missão</em>.</p><pre class="script" data-file="app/noticias/page.jsx">// modo da rota: 'no-store' = SSR (novo a cada pedido) | número = ISR (segundos)
+const MODE = 'no-store';
+
+function BuscarNoticias() {
+  // no Next.js de verdade ficaria:
+  // const res = await fetch(url, MODE === 'no-store' ? { cache: 'no-store' } : { next: { revalidate: MODE } });
+  return null;
+}
+
+function App() {
+  const [modo, setModo] = React.useState(MODE);
+  return (
+    &lt;div&gt;
+      &lt;h1&gt;🗞️ Notícias&lt;/h1&gt;
+      &lt;p&gt;Modo atual da rota: &lt;code&gt;{String(modo)}&lt;/code&gt;&lt;/p&gt;
+      &lt;p&gt;{modo === 'no-store' ? 'SSR: HTML novo a cada pedido (lento).' : `ISR: estático, recria a cada ${modo}s.`}&lt;/p&gt;
+    &lt;/div&gt;
+  );
+}</pre><pre class="solucao" data-file="app/noticias/page.jsx">const REVALIDATE = 60;        // ISR: recria a cada 60 segundos
+const MODE = REVALIDATE;
+
+function App() {
+  const [modo, setModo] = React.useState(MODE);
+  return (
+    &lt;div&gt;
+      &lt;h1&gt;🗞️ Notícias&lt;/h1&gt;
+      &lt;p&gt;Modo atual da rota: &lt;code&gt;{String(modo)}&lt;/code&gt;&lt;/p&gt;
+      &lt;p&gt;{modo === 'no-store' ? 'SSR: HTML novo a cada pedido (lento).' : `ISR: estático, recria a cada ${modo}s.`}&lt;/p&gt;
+    &lt;/div&gt;
+  );
+}</pre></div>
+<figure class="tela"><img src="assets/telas/n3-ssr-ssg-isr.png" alt="Comparação entre SSR, SSG e ISR no navegador" width="1280" height="800" loading="lazy"><figcaption>Os três ritmos da mesma página: dinâmica (SSR), estática (SSG) e estática renovada (ISR).</figcaption></figure>
+<h2>Quando dá errado</h2>
+<div class="warning"><strong>Erro clássico de build:</strong> a Ana colocou <code>fetch(..., { cache: 'no-store' })</code> numa rota que também usa <code>generateStaticParams()</code>. Na hora do <code>next build</code>, o Next.js reclama porque não dá para gerar no build uma página que busca dado novo a cada hora:</div>
+<pre class="out">Error: Route "/blog/[slug]" used `cache: 'no-store'` inside a route that uses
+`generateStaticParams`, preventing the route from being fully static.
+→ tire o 'no-store' (aceite ISR com revalidate) ou remova o generateStaticParams.</pre>
+<div class="warning"><strong>Outro clássico:</strong> a página era para ser estática, mas usava <code>cookies()</code> sem querer, e o Next.js imprime no terminal (modo dev) um aviso de "uso dinâmico do servidor" — a página passou a ser SSR sem a Ana perceber:</div>
+<pre class="out">Dynamic server usage: Route / couldn't be rendered statically because it used `cookies`.
+See more info here: https://nextjs.org/docs/messages/dynamic-server-usage
+→ ou abra mão do estático (dynamic = 'force-dynamic') ou remova a leitura de cookies da página.</pre>
+<h2>Exercícios</h2>
+<div class="mc" data-answer="2"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">No App Router, um <code>fetch</code> dentro de um Server Component <strong>sem</strong> opções de cache geralmente vira:</p><label><input type="radio" name="q1">Uma busca nova a cada render (como no React puro)</label><label><input type="radio" name="q1">Uma busca cacheada, que empurra a rota para o estático (SSG/ISR)</label><label><input type="radio" name="q1">Um erro de compilação</label></div>
+<div class="mc" data-answer="3"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">A página de notícias da Ana precisa parecer atualizada, mas não precisa ser ao vivo. A melhor escolha é:</p><label><input type="radio" name="q2">SSR com <code>cache: 'no-store'</code> em tudo</label><label><input type="radio" name="q2">SSG puro, gerado uma vez no build</label><label><input type="radio" name="q2">ISR com <code>export const revalidate = 60</code></label></div>
+<div class="mc" data-answer="1"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">Para gerar no build as páginas <code>/blog/1</code>, <code>/blog/2</code>… da rota <code>app/blog/[slug]/page.jsx</code>, você exporta:</p><label><input type="radio" name="q3"><code>generateStaticParams()</code> devolvendo <code>[{ slug: '1' }, ...]</code></label><label><input type="radio" name="q3"><code>getStaticPaths()</code></label><label><input type="radio" name="q3"><code>export const paths = [...]</code></label></div>
+<div class="exercise" data-answer="force-dynamic"><p>Complete a declaração que deixa a rota <strong>dinâmica (SSR)</strong>:</p><div class="ex-code">export const dynamic = '<input class="ex-input" autocomplete="off" spellcheck="false" autocapitalize="off">'</div><div class="ex-actions"><button type="button">Verificar</button><span class="ex-result" aria-live="polite"></span></div></div>
+<div class="exercise" data-answer="no-store"><p>Complete a opção do fetch que <strong>desliga o cache</strong> (força SSR):</p><div class="ex-code">fetch(url, { cache: '<input class="ex-input" autocomplete="off" spellcheck="false" autocapitalize="off">' })</div><div class="ex-actions"><button type="button">Verificar</button><span class="ex-result" aria-live="polite"></span></div></div>
+<div class="pager"></div>
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

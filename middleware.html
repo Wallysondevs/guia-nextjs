@@ -1,0 +1,129 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Middleware (middleware.ts) | Guia Next.js</title><meta name="description" content="Aprenda middleware no Next.js: middleware.ts na raiz com matcher, interceptação na edge, redirect para login, rewrite, modificar headers e cookies antes da resposta chegar.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
+<div class="pager"></div>
+<h1>Middleware: <code>middleware.ts</code></h1>
+<p class="intro">A Ana 👩‍💻 queria que a área <code>/painel</code> só abrisse para quem fez login — e queria barrar isso <strong>antes mesmo de a página carregar</strong>, rápido, na borda. A solução foi o <code>middleware.ts</code> na raiz do projeto: um código que roda em <em>cada requisição que combinar com o matcher</em>, antes de qualquer página, e pode redirecionar, reescrever, medir ou bloquear.</p>
+<div class="note"><strong>Você vai aprender</strong><ul><li>Criar <code>middleware.ts</code> na raiz (mesmo nível de <code>app/</code>)</li><li><code>export function middleware(request: NextRequest)</code></li><li>Os 4 retornos: <code>NextResponse.next()</code>, <code>redirect</code>, <code>rewrite</code>, resposta direta</li><li><code>export const config = { matcher: […] }</code> para limitar onde roda</li><li>Ler cookies do pedido e setar headers na resposta</li></ul></div>
+<hr><h2>A ideia: o segurança na porta do evento</h2>
+<p>Um evento grande tem um segurança na porta: antes de deixar alguém entrar, ele confere o nome na lista (cookie de sessão), cola um crachá (header na resposta) e, se a pessoa não está na lista, manda para a fila do credenciamento (redirect). O <strong>middleware é esse segurança</strong>: ele roda na <em>edge</em> — um servidor pertinho do usuário, não no servidor principal — então a checagem é rápida e acontece <em>antes</em> da página ser renderizada.</p>
+<p>O arquivo mora na raiz do projeto (ou em <code>src/</code>, se usar) e se chama <code>middleware.ts</code>. Dentro dele você exporta uma função <code>middleware</code> que recebe o pedido (<code>NextRequest</code>) e devolve uma das quatro coisas: deixar passar (<code>NextResponse.next()</code>), redirecionar, reescrever a URL por baixo dos panos, ou responder direto (bloquear). O <code>config.matcher</code> diz em quais URLs o segurança trabalha — sem ele, ele trabalharia em <em>todas</em>, inclusive nos arquivos estáticos, e deixaria o site lento.</p>
+<p>Importante: o middleware <strong>não acessa o banco de dados</strong> — ele roda na edge, sem Node completo. Ele lê cookie, header, URL e decide na hora. Validação pesada de sessão fica na página/action; aqui fica só a checagem rápida do token.</p>
+<h2>Protegendo /painel com cookie de sessão</h2>
+<pre class="file" data-file="middleware.ts (na raiz do projeto)">import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+
+export function middleware(request: NextRequest) {
+  // lê o cookie que a action de login gravou
+  const sessao = request.cookies.get("sessao")?.value;
+
+  // /painel sem sessão -> manda para o login
+  if (!sessao && request.nextUrl.pathname.startsWith("/painel")) {
+    const url = new URL("/login", request.url);
+    url.searchParams.set("de", request.nextUrl.pathname); // /login?de=/painel
+    return NextResponse.redirect(url);
+  }
+
+  // passou: segue o fluxo, mas cola um header na resposta
+  const res = NextResponse.next();
+  res.headers.set("x-ola-middleware", "passei por aqui 👋");
+  return res;
+}
+
+export const config = {
+  matcher: ["/painel/:path*", "/api/:path*"],
+  // :path* = "zero ou mais segmentos" — pega /painel e tudo abaixo
+};</pre>
+<h2>Os quatro jeitos de responder no middleware</h2>
+<pre class="file" data-file="padrões de retorno">// 1. deixar passar (e opcionalmente mexer em header/cookie da resposta)
+const res = NextResponse.next();
+res.headers.set("x-version", "2");
+res.cookies.set("visto", "sim");
+return res;
+
+// 2. redirecionar (307 temporário por padrão)
+return NextResponse.redirect(new URL("/login", request.url));
+
+// 3. reescrever: a URL muda "por baixo dos panos" — o usuário não vê
+//    /antigo -> renderiza o conteúdo de /novo
+return NextResponse.rewrite(new URL("/novo", request.url));
+
+// 4. responder direto (bloquear): devolve JSON/HTML na hora
+return NextResponse.json({ erro: "bloqueado" }, { status: 401 });</pre>
+<table class="ref">
+<tr><th>Peça</th><th>Exemplo</th><th>Efeito</th></tr>
+<tr><td><code>request.cookies.get("sessao")?.value</code></td><td>ler cookie do pedido</td><td>checar login rápido na edge</td></tr>
+<tr><td><code>request.nextUrl.pathname</code></td><td><code>/painel/relatorios</code></td><td>caminho sem query string</td></tr>
+<tr><td><code>NextResponse.redirect(new URL("/login", request.url))</code></td><td>307 para /login</td><td>redireciona o navegador</td></tr>
+<tr><td><code>NextResponse.rewrite(new URL(…))</code></td><td>reescreve a URL</td><td>renderiza outra rota sem mudar a barra de endereço</td></tr>
+<tr><td><code>NextResponse.next()</code></td><td>seguir o fluxo</td><td>permite setar headers/cookies na resposta</td></tr>
+<tr><td><code>matcher: ["/painel/:path*"]</code></td><td>config do middleware</td><td>roda só nas rotas combinadas (nunca em _next/static)</td></tr>
+</table>
+<div class="tryreact" data-goal="redirect|bloque|401|login"><p class="try-task"><strong>Missão:</strong> simulando o segurança da porta: complete a função <code>seguranca(temSessao, caminho)</code> para devolver <code>"redirect:/login"</code> quando a rota começa com <code>/painel</code> e não há sessão, e <code>"passou ✔"</code> nos outros casos. Rode com os botões.</p><pre class="script" data-file="App.jsx">function App() {
+  const [temSessao, setTemSessao] = React.useState(false);
+  const [caminho, setCaminho] = React.useState("/painel");
+  const [resultado, setResultado] = React.useState("");
+
+  // 👉 como o middleware: decide na porta
+  function seguranca(sessao, rota) {
+    setResultado("");
+  }
+
+  return (
+    &lt;div style={{ fontFamily: "sans-serif", padding: 16 }}&gt;
+      &lt;label&gt;
+        &lt;input type="checkbox" checked={temSessao}
+          onChange={(e) => setTemSessao(e.target.checked)} /&gt; tem sessão (cookie)
+      &lt;/label&gt;
+      &lt;select value={caminho} onChange={(e) => setCaminho(e.target.value)}&gt;
+        &lt;option value="/painel"&gt;/painel&lt;/option&gt;
+        &lt;option value="/"&gt;/&lt;/option&gt;
+        &lt;option value="/sobre"&gt;/sobre&lt;/option&gt;
+      &lt;/select&gt;
+      &lt;button onClick={() => seguranca(temSessao, caminho)}&gt;passar pela porta&lt;/button&gt;
+      &lt;p&gt;{resultado}&lt;/p&gt;
+    &lt;/div&gt;
+  );
+}</pre><pre class="solucao" data-file="App.jsx">function App() {
+  const [temSessao, setTemSessao] = React.useState(false);
+  const [caminho, setCaminho] = React.useState("/painel");
+  const [resultado, setResultado] = React.useState("");
+
+  function seguranca(sessao, rota) {
+    if (!sessao && rota.startsWith("/painel")) {
+      setResultado("redirect: /login?de=" + rota);
+    } else {
+      setResultado("passou ✔ (NextResponse.next())");
+    }
+  }
+
+  return (
+    &lt;div style={{ fontFamily: "sans-serif", padding: 16 }}&gt;
+      &lt;label&gt;
+        &lt;input type="checkbox" checked={temSessao}
+          onChange={(e) => setTemSessao(e.target.checked)} /&gt; tem sessão (cookie)
+      &lt;/label&gt;
+      &lt;select value={caminho} onChange={(e) => setCaminho(e.target.value)}&gt;
+        &lt;option value="/painel"&gt;/painel&lt;/option&gt;
+        &lt;option value="/"&gt;/&lt;/option&gt;
+        &lt;option value="/sobre"&gt;/sobre&lt;/option&gt;
+      &lt;/select&gt;
+      &lt;button onClick={() => seguranca(temSessao, caminho)}&gt;passar pela porta&lt;/button&gt;
+      &lt;p&gt;{resultado}&lt;/p&gt;
+    &lt;/div&gt;
+  );
+}</pre></div>
+<figure class="tela"><img src="assets/telas/middleware.png" alt="middleware.ts interceptando /painel sem cookie e redirecionando para /login" width="1280" height="800" loading="lazy"><figcaption>O matcher limita o middleware a <code>/painel/:path*</code> e <code>/api/:path*</code>; sem cookie de sessão, o pedido vira um redirect 307 para <code>/login</code>.</figcaption></figure>
+<h2>Quando dá errado</h2>
+<div class="warning"><strong>Erro:</strong> esquecer o <code>matcher</code> e deixar o middleware rodar em <em>tudo</em> — including arquivos estáticos — o que deixa o site absurdamente lento, ou pior, quebra o login num loop:</div>
+<pre class="out">⚠ Middleware is invoked on every route, isto é, em todas as rotas, inclusive _next/static/…
+// loop infinito comum:
+GET /login 307 -> /login?de=/login 307 -> /login?de=/login … (ERR_TOO_MANY_REDIRECTS)</pre>
+<p>Tradução: o middleware rodou onde não devia e o redirect criou um loop infinito de redirecionamentos. <strong>Correção:</strong> sempre exporte <code>config.matcher</code> e exclua o que não precisa (o padrão recomendado exclui <code>_next/static</code>, <code>_next/image</code> e <code>favicon.ico</code>); e no caso do login, só redirecione rotas protegidas — nunca redirecione a própria página de login.</p>
+<h2>Exercícios</h2>
+<div class="mc" data-answer="2"><p class="mc-q">1. Para o middleware rodar só em <code>/painel</code> e sub-rotas, o que configurar?</p><label><input type="radio"><code>matcher: ["/painel"]</code></label><label><input type="radio"><code>matcher: ["/painel/:path*"]</code></label><label><input type="radio"><code>matcher: "/painel/**"</code></label><label><input type="radio">Não precisa configurar nada</label><p class="mc-feedback"></p></div>
+<div class="mc" data-answer="1"><p class="mc-q">2. Como o middleware redireciona o navegador para outra URL?</p><label><input type="radio"><code>NextResponse.redirect(new URL("/login", request.url))</code></label><label><input type="radio"><code>window.location = "/login"</code></label><label><input type="radio"><code>NextResponse.rewrite("/login")</code></label><label><input type="radio"><code>return "/login"</code></label><p class="mc-feedback"></p></div>
+<div class="exercise" data-regex="request\.cookies\.get\(.sessao.\)\?\.value"><p><strong>3. Complete:</strong> dentro do middleware, como se lê o valor do cookie <code>sessao</code> que veio no pedido?</p><div class="ex-code"><input class="ex-input" type="text" placeholder="escreva aqui…" style="width:100%"></div><div class="ex-actions"><button type="button">Verificar</button></div><p class="ex-result"></p></div>
+<div class="pager"></div></div></main></div><script src="assets/site.js"></script></body></html>

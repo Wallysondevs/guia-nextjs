@@ -1,0 +1,67 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fontes (next/font) e imagens (next/image) | Guia Next.js</title><meta name="description" content="Use next/font/google para fontes self-hosted sem layout shift e next/image para imagens otimizadas (WebP, lazy loading, tamanho certo). Veja os erros reais de Image sem width/height.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
+<div class="pager"></div>
+<h1>Fontes e imagens</h1>
+<p class="intro">A página da Ana já tem conteúdo e estilo, mas as fontes carregam da internet (e a página "pula" quando a fonte chega) e as imagens estão pesadas demais. O Next.js tem dois componentes专门 para isso: o <code>next/font</code> (fontes otimizadas, baixadas no build e servidas do próprio servidor) e o <code>next/image</code> (imagens que o Next redimensiona, converte para WebP e carrega só quando aparecem na tela).</p>
+<div class="note"><strong>Você vai aprender</strong><ul><li><code>next/font/google</code>: fonte self-hosted automática, sem layout shift, com <code>variable</code> no CSS</li><li><code>next/image</code>: <code>src</code>, <code>width</code>, <code>height</code>, <code>alt</code> obrigatórios</li><li>O que o <code>&lt;Image&gt;</code> faz sozinho: WebP/AVIF, lazy loading, tamanho certo</li><li>Imagens de fora do domínio: configurar <code>remotePatterns</code> no next.config</li><li>Erros reais: Image sem width/height</li></ul></div>
+<hr><h2>A ideia: fonte é entrega em mãos, imagem é correio otimizado</h2>
+<p>Quando você usa uma fonte do Google via <code>&lt;link&gt;</code>, o navegador precisa ir até o Google, baixar a fonte, e só depois pintar o texto — e enquanto isso o texto aparece com a fonte padrão e depois "pula" para a fonte nova. Esse pulo chama-se <strong>layout shift</strong> e é péssimo para o usuário e para o Google. O <code>next/font</code> resolve isso de um jeito elegante: <strong>no momento do build</strong> (<code>npm run build</code> ou ao subir o dev), o Next.js baixa a fonte do Google, salva ela no seu próprio servidor e gera um CSS com <code>@font-face</code> apontando para os arquivos locais. Resultado: a fonte já está no seu servidor, não existe segunda viagem, não existe pulo — o texto já nasce com a fonte certa.</p>
+<p>A imagem é como um correio: se a Ana manda uma caixa de 5kg para alguém que só precisava de 200g, é desperdício. A tag <code>&lt;img&gt;</code> comum manda o arquivo original, seja qual for o tamanho — uma foto de 4MB num celular. O <code>&lt;Image&gt;</code> do Next.js é o correio otimizado: ele olha o tamanho que a imagem vai ocupar na tela, redimensiona na hora, converte para WebP/AVIF (formato mais leve), e só baixa a imagem quando ela está prestes a aparecer na tela (lazy loading). Você declara <code>width</code> e <code>height</code> — o Next usa esses números para reservar o espaço exato antes da imagem chegar, então <strong>a página não pula</strong> quando a foto carrega.</p>
+<h2>Fonte com next/font/google</h2>
+<pre class="file" data-file="app/layout.jsx">import "./globals.css";
+import { Inter } from "next/font/google";
+
+const inter = Inter({ subsets: ["latin"] });
+
+export const metadata = { title: "Meu App da Ana" };
+
+export default function RootLayout({ children }) {
+  return (
+    &lt;html lang="pt-BR" className={inter.className}&gt;
+      &lt;body&gt;{children}&lt;/body&gt;
+    &lt;/html&gt;
+  );
+}</pre>
+<p>O <code>inter.className</code> coloca a fonte no <code>&lt;html&gt;</code> inteiro. Se quiser uma fonte só para títulos, dá para usar <code>variable: "--fonte-titulo"</code> e aplicar <code>style={{ fontFamily: "var(--fonte-titulo)" }}</code> onde quiser. Zero layout shift.</p>
+<h2>Imagem com next/image</h2>
+<p>Coloque a imagem em <code>public/</code> (ex.: <code>public/foto.png</code>) e use:</p>
+<pre class="file" data-file="app/page.jsx">import Image from "next/image";
+
+export default function Home() {
+  return (
+    &lt;main&gt;
+      &lt;h1&gt;Minha foto&lt;/h1&gt;
+      &lt;Image src="/foto.png" width={500} height={320} alt="Foto da Ana no parque" /&gt;
+    &lt;/main&gt;
+  );
+}</pre>
+<p><code>width</code> e <code>height</code> são <strong>obrigatórios</strong> (exceto quando usa <code>fill</code>) justamente para o Next.js reservar o espaço e evitar o pulo de layout. O <code>alt</code> é obrigatório por acessibilidade. Se a imagem vier de outro site (Unsplash, etc.), é preciso liberar o domínio em <code>next.config.mjs</code>:</p>
+<pre class="file" data-file="next.config.mjs">const nextConfig = {
+  images: {
+    remotePatterns: [{ protocol: "https", hostname: "images.unsplash.com" }],
+  },
+};
+export default nextConfig;</pre>
+<figure class="tela"><img src="assets/telas/fontes-imagens.png" alt="Página com título grande na fonte Inter e uma imagem otimizada pelo next/image, com a lista do que o Image faz sozinho" width="1280" height="800" loading="lazy"><figcaption>Página com <code>next/font</code> (título na Inter, sem pulo) e <code>next/image</code> (imagem redimensionada e em lazy loading).</figcaption></figure>
+<div class="table-wrap"><table class="ref"><tr><th>Prop</th><th>Obrigatória?</th><th>Pra que serve</th></tr><tr><td><code>src</code></td><td>✅</td><td>Caminho da imagem (<code>/foto.png</code> de public/) ou URL externa liberada</td></tr><tr><td><code>width</code> / <code>height</code></td><td>✅ (ou <code>fill</code>)</td><td>Reserva o espaço e define o redimensionamento — evita layout shift</td></tr><tr><td><code>alt</code></td><td>✅</td><td>Texto alternativo (acessibilidade + SEO)</td></tr><tr><td><code>fill</code></td><td>alternativa</td><td>Ocupa o container relativo (substitui width/height)</td></tr><tr><td><code>priority</code></td><td>não</td><td>Carrega junto com a página (use no logo/hero, sem lazy)</td></tr></table></div>
+<h2>Quando dá errado</h2>
+<div class="warning"><strong>Erro:</strong> a Ana usou <code>&lt;Image&gt;</code> sem width/height e o Next.js recusou:</div>
+<pre class="out">Error: Image with src "/foto.png" is missing required "width" property.
+
+Dica do guia: o &lt;Image&gt; exige width e height (números, em px) — é assim que
+ele reserva o espaço e evita o pulo de layout. Ex.:
+  &lt;Image src="/foto.png" width={500} height={320} alt="..." /&gt;</pre>
+<div class="warning"><strong>Erro:</strong> imagem de outro domínio sem configurar:</div>
+<pre class="out">Error: Invalid src prop (https://images.unsplash.com/...) on `next/image`:
+hostname "images.unsplash.com" is not configured under images in next.config
+
+Dica do guia: libere o domínio em next.config.mjs:
+  images: { remotePatterns: [{ protocol: "https", hostname: "images.unsplash.com" }] }</pre>
+<h2>Exercícios</h2>
+<div class="mc" data-answer="3"><p class="mc-q">1. Qual componente do Next.js otimiza imagens (WebP, lazy, tamanho certo)?</p><label><input type="radio" name="q1">&lt;img&gt;</label><label><input type="radio" name="q1">&lt;Picture&gt;</label><label><input type="radio" name="q1">&lt;Image&gt; de "next/image"</label><label><input type="radio" name="q1">&lt;Img&gt; de "next/font"</label><p class="mc-feedback"></p></div>
+<div class="mc" data-answer="2"><p class="mc-q">2. O que o next/font/google faz que um &lt;link&gt; do Google Fonts não faz?</p><label><input type="radio" name="q2">Muda a cor da fonte</label><label><input type="radio" name="q2">Baixa a fonte no build e serve do próprio servidor, sem layout shift</label><label><input type="radio" name="q2">Traduz a página</label><label><input type="radio" name="q2">Apaga a fonte depois de 30 dias</label><p class="mc-feedback"></p></div>
+<div class="exercise" data-answer="width"><h2>Exercício 1</h2><p>Além de <code>src</code> e <code>alt</code>, quais props de tamanho o <code>&lt;Image&gt;</code> exige? Escreva uma delas:</p><div class="ex-code"><input class="ex-input" type="text" placeholder="prop de tamanho..." style="width:100%"></div><div class="ex-actions"><button type="button">Verificar</button></div><p class="ex-result"></p></div>
+<div class="pager"></div></div></main></div><script src="assets/site.js"></script></body></html>

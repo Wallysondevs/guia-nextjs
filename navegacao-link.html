@@ -1,0 +1,65 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Navegação com Link (next/link) | Guia Next.js</title><meta name="description" content="Aprenda a navegar entre páginas no Next.js com o componente Link do next/link: prefetch automático, navegação sem recarregar a página e useRouter do next/navigation para rotas programáticas.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
+<div class="pager"></div>
+<h1>Navegação com Link</h1>
+<p class="intro">A Ana criou a página <code>/sobre</code>, mas até agora só dá para chegar nela digitando a URL. E se ela usar a tag <code>&lt;a&gt;</code> comum? A página recarrega inteira — adeus, velocidade do React. Nesta página você vai aprender o <code>&lt;Link&gt;</code> do Next.js, que navega <em>sem recarregar</em> e ainda deixa as próximas páginas pré-carregadas.</p>
+<div class="note"><strong>Você vai aprender</strong><ul><li>Por que <strong>não</strong> usar <code>&lt;a href&gt;</code> em apps Next.js (recarrega tudo)</li><li><code>import Link from "next/link"</code> e <code>&lt;Link href="/sobre"&gt;</code></li><li>Prefetch automático: rotas no viewport já são pré-carregadas</li><li><code>useRouter</code> do <code>next/navigation</code> para navegar por código (<code>router.push</code>)</li><li>O erro real de importar <code>useRouter</code> do lugar errado</li></ul></div>
+<hr><h2>A ideia: <code>&lt;a&gt;</code> é ir de carroça, <code>&lt;Link&gt;</code> é o metrô com a próxima estação já aberta</h2>
+<p>Num site antigo, clicar num link é como <strong>descer do carro, desmontar a barraca e montar de novo no próximo camping</strong>: o navegador pede a página inteira nova ao servidor, joga todo o JavaScript fora e começa do zero — por isso a tela pisca branca e o menu some e volta. A tag <code>&lt;a href="/sobre"&gt;</code> faz exatamente isso: uma navegação "burra" de documento inteiro.</p>
+<p>O <code>&lt;Link&gt;</code> do Next.js é como um <strong>metrô de app</strong>: ao clicar, ele troca só o "trecho" da viagem (a página), mantendo o resto do trem (o layout, o JavaScript, o estado) — a tela não pisca. E tem mais: o Next.js é esperto e <strong>faz o prefetch automático</strong>: quando um <code>&lt;Link&gt;</code> entra na tela (no viewport), ele já baixa em segundo plano o código da página de destino. Quando o usuário clica, a página já está pronta — a troca é praticamente instantânea. É como o metrô que já deixou a próxima estação com as portas abertas antes de você chegar.</p>
+<p>Para navegação <em>por código</em> — por exemplo, depois de enviar um formulário, ir para outra página — usamos o hook <code>useRouter</code>, mas atenção: no App Router ele vem de <code>next/navigation</code> (não de <code>next/router</code>, que é o antigo). Com ele, a Ana faz <code>router.push("/sobre")</code> dentro de um evento.</p>
+<h2>Montando o menu com Link</h2>
+<pre class="file" data-file="app/page.jsx">import Link from "next/link";
+
+export default function Home() {
+  return (
+    &lt;main&gt;
+      &lt;nav&gt;
+        &lt;Link href="/"&gt;Início&lt;/Link&gt;
+        &lt;Link href="/sobre"&gt;Sobre&lt;/Link&gt;
+      &lt;/nav&gt;
+      &lt;h1&gt;Página inicial&lt;/h1&gt;
+    &lt;/main&gt;
+  );
+}</pre>
+<p>O <code>href</code> funciona igual ao do <code>&lt;a&gt;</code>, então a intuição continua valendo. A diferença está no comportamento: sem reload, com prefetch. Dá para estilizar o link ativo com o hook <code>usePathname()</code> (também de <code>next/navigation</code>) — mas isso já é assunto de componente client, que vem já já.</p>
+<figure class="tela"><img src="assets/telas/navegacao-link.png" alt="Página com menu usando Link e um destaque explicando o prefetch automático da rota /sobre" width="1280" height="800" loading="lazy"><figcaption>O menu com <code>&lt;Link href="/sobre"&gt;</code>: ao entrar na tela, o Next.js já pré-carrega a rota.</figcaption></figure>
+<h2>Navegação programática com useRouter</h2>
+<p>Quando a página precisa decidir para onde ir (depois de um clique em botão, por exemplo), usamos o <code>useRouter</code> — mas isso exige interatividade, então o componente precisa de <code>"use client"</code> no topo (você verá os detalhes no capítulo Server vs Client):</p>
+<pre class="file" data-file="app/botao-ir.jsx">"use client";
+
+import { useRouter } from "next/navigation";
+
+export default function BotaoIr() {
+  const router = useRouter();
+
+  return (
+    &lt;button onClick={() =&gt; router.push("/sobre")}&gt;
+      Ir para Sobre
+    &lt;/button&gt;
+  );
+}</pre>
+<div class="table-wrap"><table class="ref"><tr><th>Situação</th><th>Use</th><th>Import</th></tr><tr><td>Link no menu / texto clicável</td><td><code>&lt;Link href="/sobre"&gt;</code></td><td><code>next/link</code></td></tr><tr><td>Ir para outra rota no código</td><td><code>router.push("/sobre")</code></td><td><code>useRouter</code> de <code>next/navigation</code></td></tr><tr><td>Voltar na página anterior</td><td><code>router.back()</code></td><td><code>useRouter</code> de <code>next/navigation</code></td></tr><tr><td>Saber a rota atual (p/ link ativo)</td><td><code>usePathname()</code></td><td><code>next/navigation</code></td></tr><tr><td>Recarregar os dados da rota</td><td><code>router.refresh()</code></td><td><code>next/navigation</code></td></tr></table></div>
+<h2>Quando dá errado</h2>
+<div class="warning"><strong>Erro 1:</strong> a Ana usou <code>&lt;a href="/sobre"&gt;</code> em vez de <code>&lt;Link&gt;</code> e percebeu que a página recarrega inteira (perde o estado, pisca branca):</div>
+<pre class="out">(não dá erro no console — é comportamento: a página faz full reload,
+o layout pisca e o estado dos componentes zera)
+
+Dica do guia: em app Next.js, use SEMPRE &lt;Link&gt; de "next/link" para rotas
+internas. Guarde o &lt;a&gt; só para links EXTERNOS (https://google.com).</pre>
+<div class="warning"><strong>Erro 2:</strong> importou o useRouter do lugar antigo (Pages Router) dentro do App Router:</div>
+<pre class="out">import { useRouter } from "next/router";   ← errado no App Router
+
+Module not found / hook não funciona como esperado.
+
+Dica do guia: no App Router (pasta app/) o certo é:
+  import { useRouter } from "next/navigation";
+("next/router" é só para projetos antigos com pasta pages/.)</pre>
+<h2>Exercícios</h2>
+<div class="mc" data-answer="2"><p class="mc-q">1. Qual componente do Next.js a Ana deve usar para links internos (navegação sem recarregar)?</p><label><input type="radio" name="q1">&lt;a href="/sobre"&gt;</label><label><input type="radio" name="q1">&lt;Link href="/sobre"&gt; de "next/link"</label><label><input type="radio" name="q1">&lt;NavLink&gt;</label><label><input type="radio" name="q1">router.push no import</label><p class="mc-feedback"></p></div>
+<div class="mc" data-answer="3"><p class="mc-q">2. De onde vem o useRouter no App Router (pasta app/)?</p><label><input type="radio" name="q2">next/router</label><label><input type="radio" name="q2">react-router-dom</label><label><input type="radio" name="q2">next/navigation</label><label><input type="radio" name="q2">next/link</label><p class="mc-feedback"></p></div>
+<div class="exercise" data-answer="import Link from \"next/link\""><h2>Exercício 1</h2><p>Escreva a linha de import correta para usar o componente <code>Link</code> do Next.js no App Router:</p><div class="ex-code"><input class="ex-input" type="text" placeholder="import ..." style="width:100%"></div><div class="ex-actions"><button type="button">Verificar</button></div><p class="ex-result"></p></div>
+<div class="pager"></div></div></main></div><script src="assets/site.js"></script></body></html>

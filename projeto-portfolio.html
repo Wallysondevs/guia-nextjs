@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projeto: Portfólio com PPR e imagens otimizadas | Guia Next.js</title>
+<meta name="description" content="Projeto guiado: um portfólio rápido em Next.js com hero estático (PPR), projetos vindos de uma API dentro de Suspense (parte dinâmica em streaming), galeria com next/image, next/font próprio e metadata/OpenGraph por página.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+<div class="pager"></div>
+<h1>Projeto: Portfólio com PPR e imagens otimizadas</h1>
+<p class="intro">A Ana é designer e quer um portfólio que carregue <strong>na hora</strong> no celular: o "oi, eu sou a Ana" (hero) sai do cache instantaneamente, os projetos (que vêm de uma API e podem mudar) entram por streaming logo depois, e todas as fotos passam pelo <code>next/image</code> — sem pulo de layout, em WebP, no tamanho da tela.</p>
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>Estrutura: <code>app/page.jsx</code> (hero estático) + <code>&lt;Suspense&gt;</code> com a lista de projetos</li>
+<li>PPR incremental: <code>experimental_ppr = true</code> na home → shell estático + ilhas dinâmicas</li>
+<li>Galeria com <code>&lt;Image fill sizes&gt;</code> dentro de containers com altura fixa (zero CLS)</li>
+<li><code>next/font/local</code> com a fonte própria dela (offline-safe no build)</li>
+<li><code>generateMetadata</code> com OpenGraph (a pré-visualização bonita ao compartilhar o link)</li>
+</ul></div>
+<hr>
+<h2>A ideia: a vitrine de tráfico rápido com estoque nos fundos</h2>
+<p>O portfólio da Ana é uma vitrine: a parte de cima — foto dela, nome, "designer &amp; front-end" — é <strong>igual para todo visitante</strong> e fica pré-renderizada no cache (com PPR, esse shell sai na hora). Os projetos, que vêm de uma API e podem mudar, ficam nos fundos: o servidor busca depois e manda por streaming para dentro do Suspense. As fotos da vitrine são todas com <code>&lt;Image&gt;</code>: o espaço já está reservado, então a página não pula enquanto carrega — o celular agradece.</p>
+<h2>Passo 1 — estrutura, fonte própria e hero estático</h2>
+<pre class="file" data-file="terminal">npx create-next-app@latest portfolio-ana
+cd portfolio-ana
+mkdir -p public/fonts app/projetos components</pre>
+<pre class="file" data-file="app/layout.jsx">import localFont from 'next/font/local';
+import './globals.css';
+
+// fonte própria, baixada no build e servida do próprio servidor (offline-safe)
+const minhaFonte = localFont({
+  src: '../public/fonts/MinhaFonte.woff2',
+  variable: '--font-ana',
+  display: 'swap',
+});
+
+export const metadata = {
+  title: { default: 'Ana — Designer &amp; Front-end', template: '%s | Ana' },
+  description: 'Portfólio da Ana: projetos de design e desenvolvimento web.',
+  openGraph: {
+    title: 'Ana — Designer &amp; Front-end',
+    description: 'Projetos, estudos de caso e contato.',
+    images: ['/og.png'], // 1200×630 em public/og.png
+  },
+};
+
+export default function RootLayout({ children }) {
+  return (
+    &lt;html lang="pt-BR" className={minhaFonte.variable}&gt;
+      &lt;body&gt;{children}&lt;/body&gt;
+    &lt;/html&gt;
+  );
+}</pre>
+<pre class="file" data-file="app/page.jsx">import Image from 'next/image';
+import { Suspense } from 'react';
+import ListaProjetos from '@/components/ListaProjetos';
+
+export const experimental_ppr = true; // PPR incremental: shell estático + ilhas dinâmicas
+
+export default function Home() {
+  return (
+    &lt;main&gt;
+      {/* HERO ESTÁTICO — igual para todos, servido do cache na hora */}
+      &lt;section style={{ textAlign: 'center', padding: '80px 16px' }}&gt;
+        &lt;Image src="/ana.jpg" alt="Foto da Ana" width={160} height={160} priority style={{ borderRadius: '50%' }} /&gt;
+        &lt;h1&gt;Oi, eu sou a Ana 👋&lt;/h1&gt;
+        &lt;p&gt;Designer &amp; desenvolvedora front-end. Aqui estão meus projetos.&lt;/p&gt;
+      &lt;/section&gt;
+
+      {/* PROJETOS DINÂMICOS — vêm da API, entram por streaming dentro do Suspense */}
+      &lt;Suspense fallback={&lt;p style={{ textAlign: 'center' }}&gt;⏳ Carregando projetos…&lt;/p&gt;}&gt;
+        &lt;ListaProjetos /&gt;
+      &lt;/Suspense&gt;
+    &lt;/main&gt;
+  );
+}</pre>
+<h2>Passo 2 — projetos vindos da API (ilha dinâmica)</h2>
+<pre class="file" data-file="components/ListaProjetos.jsx">import Image from 'next/image';
+import Link from 'next/link';
+
+async function getProjetos() {
+  const res = await fetch('https://api.exemplo.com/projetos', { cache: 'no-store' });
+  // await new Promise(r =&gt; setTimeout(r, 2500)); // teste: simula API lenta
+  return res.json();
+}
+
+export default async function ListaProjetos() {
+  const projetos = await getProjetos(); // suspende aqui: o fallback do Suspense aparece
+  return (
+    &lt;section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16, padding: 16 }}&gt;
+      {projetos.map(p =&gt; (
+        &lt;Link key={p.slug} href={`/projetos/${p.slug}`}&gt;
+          &lt;div style={{ position: 'relative', width: '100%', height: 200 }}&gt;
+            &lt;Image src={p.capa} alt={p.titulo} fill sizes="(max-width: 768px) 100vw, 400px" style={{ objectFit: 'cover', borderRadius: 8 }} /&gt;
+          &lt;/div&gt;
+          &lt;h3&gt;{p.titulo}&lt;/h3&gt;
+          &lt;p&gt;{p.resumo}&lt;/p&gt;
+        &lt;/Link&gt;
+      ))}
+    &lt;/section&gt;
+  );
+}</pre>
+<h2>Passo 3 — página do projeto com galeria otimizada</h2>
+<pre class="file" data-file="app/projetos/[slug]/page.jsx">import Image from 'next/image';
+import { notFound } from 'next/navigation';
+
+export async function generateStaticParams() {
+  const res = await fetch('https://api.exemplo.com/projetos');
+  const projetos = await res.json();
+  return projetos.map(p =&gt; ({ slug: p.slug }));
+}
+
+export const revalidate = 300; // ISR: 5 min
+
+export async function generateMetadata({ params }) {
+  const { slug } = await params;
+  const res = await fetch(`https://api.exemplo.com/projetos/${slug}`);
+  if (!res.ok) return {};
+  const p = await res.json();
+  return { title: p.titulo, description: p.resumo, openGraph: { images: [p.capa] } };
+}
+
+export default async function Projeto({ params }) {
+  const { slug } = await params;
+  const res = await fetch(`https://api.exemplo.com/projetos/${slug}`, { next: { revalidate: 300 } });
+  if (!res.ok) notFound();
+  const p = await res.json();
+
+  return (
+    &lt;article style={{ maxWidth: 800, margin: '0 auto', padding: 16 }}&gt;
+      &lt;h1&gt;{p.titulo}&lt;/h1&gt;
+      &lt;div style={{ position: 'relative', width: '100%', height: 400 }}&gt;
+        &lt;Image src={p.capa} alt={p.titulo} fill priority sizes="(max-width: 800px) 100vw, 800px" style={{ objectFit: 'cover' }} /&gt;
+      &lt;/div&gt;
+      &lt;div dangerouslySetInnerHTML={{ __html: p.conteudoHtml }} /&gt;
+      &lt;h2&gt;Galeria&lt;/h2&gt;
+      &lt;div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}&gt;
+        {p.galeria.map((foto, i) =&gt; (
+          &lt;div key={i} style={{ position: 'relative', width: '100%', height: 220 }}&gt;
+            &lt;Image src={foto} alt={`${p.titulo} — foto ${i + 1}`} fill sizes="(max-width: 800px) 50vw, 400px" style={{ objectFit: 'cover', borderRadius: 8 }} /&gt;
+          &lt;/div&gt;
+        ))}
+      &lt;/div&gt;
+    &lt;/article&gt;
+  );
+}</pre>
+<figure class="tela"><img src="assets/telas/proj-portfolio.png" alt="Portfólio com hero estático, projetos em streaming e galeria otimizada" width="1280" height="800" loading="lazy"><figcaption>Hero estático servido do cache (PPR) e projetos entrando por streaming; fotos todas com next/image (zero CLS).</figcaption></figure>
+<div class="tryreact" data-goal="Suspense"><p class="try-task"><strong>Missão:</strong> no código, a lista de projetos está solta — se a API demorar, a página inteira trava. Envolva <code>&lt;Projetos /&gt;</code> em <code>&lt;React.Suspense fallback={…}&gt;</code> com um fallback de "carregando…" (é o mesmo mecanismo do PPR/streaming). Rode e clique em <em>Verificar missão</em>.</p><pre class="script" data-file="app/page.jsx">function Projetos() {
+  const P = React.lazy(() =&gt; new Promise(res =&gt; setTimeout(() =&gt;
+    res({ default: () =&gt; &lt;p&gt;🖼️ 6 projetos carregados!&lt;/p&gt; }), 2000)));
+  return &lt;P /&gt;;
+}
+
+function App() {
+  return (
+    &lt;main&gt;
+      &lt;h1&gt;👋 Oi, eu sou a Ana&lt;/h1&gt;
+      &lt;p&gt;✅ hero aparece na hora (estático)&lt;/p&gt;
+      {/* TODO: &lt;React.Suspense fallback={&lt;p&gt;⏳ carregando projetos…&lt;/p&gt;}&gt; */}
+      &lt;Projetos /&gt;
+    &lt;/main&gt;
+  );
+}</pre><pre class="solucao" data-file="app/page.jsx">function Projetos() {
+  const P = React.lazy(() =&gt; new Promise(res =&gt; setTimeout(() =&gt;
+    res({ default: () =&gt; &lt;p&gt;🖼️ 6 projetos carregados!&lt;/p&gt; }), 2000)));
+  return &lt;P /&gt;;
+}
+
+function App() {
+  return (
+    &lt;main&gt;
+      &lt;h1&gt;👋 Oi, eu sou a Ana&lt;/h1&gt;
+      &lt;p&gt;✅ hero aparece na hora (estático)&lt;/p&gt;
+      &lt;React.Suspense fallback={&lt;p&gt;⏳ carregando projetos…&lt;/p&gt;}&gt;
+        &lt;Projetos /&gt;
+      &lt;/React.Suspense&gt;
+    &lt;/main&gt;
+  );
+}</pre></div>
+<h2>Quando dá errado</h2>
+<div class="warning"><strong>Erro real:</strong> a galeria causa CLS porque as imagens usam <code>fill</code> dentro de um container <strong>sem altura</strong> (o <code>position: relative</code> sem height deixa o espaço zerado até a foto chegar):</div>
+<pre class="out">CLS: 0.31 — elemento deslocado: &lt;div style="position:relative"&gt; sem height
+→ sempre defina altura no container (height: 220px) OU use width/height na imagem</pre>
+<div class="warning"><strong>PPR ligado mas nada ficou estático:</strong> no modo incremental, só rotas com <code>export const experimental_ppr = true</code> entram no PPR — e partes que leem <code>cookies()</code>/<code>headers()</code> fora do Suspense derrubam o shell inteiro para dinâmico:</div>
+<pre class="out">Route / rendered dynamically: used `cookies` outside Suspense with PPR
+→ envolva a leitura dinâmica em &lt;Suspense&gt; para preservar o shell estático</pre>
+<h2>Exercícios</h2>
+<div class="mc" data-answer="2"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">No PPR, o hero (igual para todos) deve ficar:</p><label><input type="radio" name="q1">Dentro do Suspense com os projetos</label><label><input type="radio" name="q1">Fora do Suspense — vira shell estático servido do cache na hora</label><label><input type="radio" name="q1">Num Client Component</label></div>
+<div class="mc" data-answer="1"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">Para a galeria não causar layout shift, cada foto com <code>fill</code> precisa de:</p><label><input type="radio" name="q2">Um container com <code>position: relative</code> e <strong>altura definida</strong></label><label><input type="radio" name="q2">Só <code>position: relative</code></label><label><input type="radio" name="q2">Nada, o Next.js descobre o tamanho</label></div>
+<div class="mc" data-answer="3"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">A pré-visualização bonita ao compartilhar o link (título + imagem) vem de:</p><label><input type="radio" name="q3">Um print tirado na mão</label><label><input type="radio" name="q3">Um <code>console.log</code></label><label><input type="radio" name="q3"><code>metadata.openGraph</code> (com imagem 1200×630 em <code>public/og.png</code>)</label></div>
+<div class="exercise" data-answer="true"><p>Complete o opt-in de PPR na página:</p><div class="ex-code">export const experimental_ppr = <input class="ex-input" autocomplete="off" spellcheck="false" autocapitalize="off"></div><div class="ex-actions"><button type="button">Verificar</button><span class="ex-result" aria-live="polite"></span></div></div>
+<div class="exercise" data-answer="fill"><p>Complete a prop da imagem que ocupa o container inteiro:</p><div class="ex-code">&lt;Image src="/foto.jpg" alt="…" <input class="ex-input" autocomplete="off" spellcheck="false" autocapitalize="off"> sizes="100vw" /&gt;</div><div class="ex-actions"><button type="button">Verificar</button><span class="ex-result" aria-live="polite"></span></div></div>
+<div class="pager"></div>
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

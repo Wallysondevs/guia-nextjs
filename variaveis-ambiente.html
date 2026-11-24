@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Variáveis de ambiente: .env e NEXT_PUBLIC_ | Guia Next.js</title>
+<meta name="description" content="Separe o que vai para o navegador do que fica só no servidor: .env.local nunca vai pro git, só variáveis NEXT_PUBLIC_ são embutidas no client, secrets ficam no painel da Vercel e dá para validar com @t3-oss/env-nextjs.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+<div class="pager"></div>
+<h1>Variáveis de ambiente: .env, NEXT_PUBLIC_ e secrets</h1>
+<p class="intro">A Ana cometeu o erro clássico: colocou a chave da API de pagamento dentro do código, commitou no GitHub e o bot dela achou a chave em 40 segundos. Nesta aula você aprende a regra de ouro do Next.js: <strong> só variáveis com prefixo <code>NEXT_PUBLIC_</code> vão para o navegador</strong> — todo o resto fica só no servidor, e o que é segredo mora no painel da Vercel, nunca no repositório.</p>
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>Os arquivos <code>.env</code>, <code>.env.local</code>, <code>.env.production</code> e a ordem de prioridade</li>
+<li><code>.env.local</code> no <code>.gitignore</code>; <code>.env.example</code> commitado (sem valores reais)</li>
+<li><code>NEXT_PUBLIC_*</code>: embutida no bundle do client (qualquer visitante vê — use só para coisas públicas)</li>
+<li>Sem o prefixo: só no servidor (Server Components, Server Actions, route handlers) — <code>process.env.STRIPE_SECRET_KEY</code></li>
+<li>Variáveis na Vercel por escopo (Production/Preview/Development) e <code>vercel env pull</code></li>
+<li>Validação com <code>@t3-oss/env-nextjs</code> para falhar cedo no build</li>
+</ul></div>
+<hr>
+<h2>A ideia: o crachá público e a chave do cofre</h2>
+<p>Toda empresa tem dois tipos de crachá: o <strong>crachá de visitante</strong>, que pode ser lido por qualquer um na portaria (nome, foto, empresa) — e a <strong>chave do cofre</strong>, que fica com o gerente e nunca sai do bolso. No Next.js, as variáveis <code>NEXT_PUBLIC_*</code> são o crachá de visitante: na hora do build, o valor é <em>embutido no JavaScript que vai para o navegador</em> — qualquer pessoa pode abrir o DevTools, ir em Sources e ler. Já as variáveis sem prefixo são a chave do cofre: ficam só no servidor, onde o navegador nunca chega.</p>
+<p>A regra da Ana ficou simples: <strong>se o valor pode ser público (URL da API, nome do app, chave pública do Stripe), pode ter <code>NEXT_PUBLIC_</code>. Se é segredo (chave secreta do Stripe, token do banco, senha de SMTP), não tem prefixo e só é lida no servidor</strong> — em Server Components, Server Actions e route handlers (<code>app/api/.../route.js</code>). Um detalhe importante: mudar uma variável <code>NEXT_PUBLIC_</code> exige <em>rebuild</em>, porque o valor foi embutido no código; mudar uma de servidor não (só reiniciar/redeploy).</p>
+<h2>Os arquivos .env e quem lê o quê</h2>
+<pre class="file" data-file=".env.example"># COMMITADO no git — só os nomes, sem valores reais (o time sabe o que existe)
+NEXT_PUBLIC_API_URL=
+NEXT_PUBLIC_APP_NOME=Loja da Ana
+DATABASE_URL=
+STRIPE_SECRET_KEY=</pre>
+<pre class="file" data-file=".env.local"># NUNCA commitado (está no .gitignore) — seus valores reais de desenvolvimento
+NEXT_PUBLIC_API_URL=http://localhost:3001
+DATABASE_URL=file:./dev.db
+STRIPE_SECRET_KEY=sk_test_51ABC…</pre>
+<pre class="file" data-file=".gitignore">node_modules/
+.next/
+.env.local
+.env*.local
+*.log</pre>
+<pre class="file" data-file="app/page.jsx">// Server Component: lê as DUAS (servidor) — o navegador nunca vê process.env sem NEXT_PUBLIC_
+export default function Home() {
+  const nome = process.env.NEXT_PUBLIC_APP_NOME; // público (vai pro client se usado num client component)
+  return &lt;h1&gt;{nome}&lt;/h1&gt;;
+}</pre>
+<pre class="file" data-file="app/api/checkout/route.js">// Route handler (servidor): aqui dá para ler o segredo com segurança
+import Stripe from 'stripe';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY); // só existe no servidor ✅
+
+export async function POST() {
+  const session = await stripe.checkout.sessions.create({ /* … */ });
+  return Response.json({ url: session.url });
+}</pre>
+<pre class="file" data-file="app/Configuracao.jsx">'use client';
+// Client Component: SÓ enxerga as NEXT_PUBLIC_ (as outras vêm undefined aqui)
+export default function Configuracao() {
+  return &lt;p&gt;API pública: {process.env.NEXT_PUBLIC_API_URL}&lt;/p&gt;;
+  // process.env.STRIPE_SECRET_KEY aqui seria undefined — e se tentasse com NEXT_PUBLIC_,
+  // o segredo vazaria no bundle do navegador ❌</pre>
+<h2>Na Vercel: escopos e pull local</h2>
+<pre class="file" data-file="terminal"># no painel: vercel.com → projeto → Settings → Environment Variables
+# marque em quais escopos cada variável vale: ☑ Production ☑ Preview ☑ Development
+
+# puxar as variáveis de produção para o .env.local (ignorado pelo git):
+vercel env pull .env.local</pre>
+<div class="tryreact" data-goal="NEXT_PUBLIC_"><p class="try-task"><strong>Missão:</strong> no código abaixo, a Ana guardou a <strong>chave secreta</strong> numa variável sem prefixo (seguro no servidor) e a URL da API numa variável pública. Renomeie a variável pública para começar com <code>NEXT_PUBLIC_</code> (ex.: <code>NEXT_PUBLIC_API_URL</code>) — é a única que pode ser lida no navegador. Rode para ver quais variáveis "aparecem" no client. Depois clique em <em>Verificar missão</em>.</p><pre class="script" data-file="app/config.js">const config = {
+  // o que o NAVEGADOR pode ver (vai pro bundle do client):
+  apiUrl: 'http://localhost:3001',
+  // o que só o SERVIDOR vê:
+  stripeSecret: 'sk_test_51ABC…',
+};
+
+function App() {
+  const publico = Object.keys(config).filter(k =&gt; k.startsWith('NEXT_PUBLIC_'));
+  return (
+    &lt;div&gt;
+      &lt;h1&gt;🔐 Variáveis&lt;/h1&gt;
+      &lt;p&gt;No client, dá para ler: {publico.length ? publico.join(', ') : '(nada ainda)'}&lt;/p&gt;
+      &lt;p&gt;No servidor, dá para ler: apiUrl e stripeSecret&lt;/p&gt;
+    &lt;/div&gt;
+  );
+}</pre><pre class="solucao" data-file="app/config.js">const config = {
+  NEXT_PUBLIC_API_URL: 'http://localhost:3001', // ✅ público de propósito
+  STRIPE_SECRET_KEY: 'sk_test_51ABC…',           // ✅ só servidor
+};
+
+function App() {
+  const publico = Object.keys(config).filter(k =&gt; k.startsWith('NEXT_PUBLIC_'));
+  return (
+    &lt;div&gt;
+      &lt;h1&gt;🔐 Variáveis&lt;/h1&gt;
+      &lt;p&gt;No client, dá para ler: {publico.length ? publico.join(', ') : '(nada ainda)'}&lt;/p&gt;
+      &lt;p&gt;No servidor, dá para ler: NEXT_PUBLIC_API_URL e STRIPE_SECRET_KEY&lt;/p&gt;
+    &lt;/div&gt;
+  );
+}</pre></div>
+<figure class="tela"><img src="assets/telas/n3-env.png" alt="Variáveis de ambiente no painel da Vercel por escopo" width="1280" height="800" loading="lazy"><figcaption>Na Vercel, cada variável é setada por escopo (Production/Preview/Development) — nunca no código.</figcaption></figure>
+<h2>Quando dá errado</h2>
+<div class="warning"><strong>O desastre:</strong> a chave secreta vazou. Se você commitar <code>.env.local</code> no git, o valor fica no histórico <strong>para sempre</strong> — mesmo apagando depois. A correção: trocar a chave no provedor (Stripe/Google), adicionar <code>.env*.local</code> no <code>.gitignore</code>, e limpar o histórico com <code>git filter-repo</code> (ou recriar o repositório).</div>
+<pre class="out">$ git log --all --full-history -- .env.local   # mostra o vazamento
+$ grep -r "sk_test_51ABC" .next/static/          # confirma que foi pro bundle
+→ revogue a chave, troque por outra, e NUNCA use NEXT_PUBLIC_ em segredo.</pre>
+<div class="warning"><strong>Erro comum de produção:</strong> <code>process.env.NEXT_PUBLIC_API_URL</code> vem <code>undefined</code> no navegador depois do deploy. Quase sempre a variável foi setada na Vercel <strong>depois do último build</strong> — como o valor é embutido no build, precisa fazer um <em>redeploy</em> (ou a variável foi setada sem o prefixo <code>NEXT_PUBLIC_</code>):</div>
+<pre class="out">console.log(process.env.NEXT_PUBLIC_API_URL) // undefined no client
+→ Vercel → Settings → Environment Variables → confira o nome e o escopo
+→ depois: Deployments → … → Redeploy (o build embute a variável nova)</pre>
+<h2>Exercícios</h2>
+<div class="mc" data-answer="2"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">Quais variáveis chegam no navegador (client)?</p><label><input type="radio" name="q1">Todas as que estiverem no <code>.env</code></label><label><input type="radio" name="q1">Só as que começam com <code>NEXT_PUBLIC_</code> (são embutidas no bundle)</label><label><input type="radio" name="q1">Nenhuma — o Next.js bloqueia tudo</label></div>
+<div class="mc" data-answer="3"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">A chave secreta do Stripe deve ficar:</p><label><input type="radio" name="q2">Em <code>NEXT_PUBLIC_STRIPE_KEY</code> para facilitar</label><label><input type="radio" name="q2">No código comentado, para não esquecer</label><label><input type="radio" name="q2">Em <code>STRIPE_SECRET_KEY</code> (sem prefixo) no <code>.env.local</code>/painel da Vercel — só o servidor lê</label></div>
+<div class="mc" data-answer="1"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">Qual arquivo vai para o git com os <strong>nomes</strong> das variáveis, sem valores?</p><label><input type="radio" name="q3"><code>.env.example</code></label><label><input type="radio" name="q3"><code>.env.local</code></label><label><input type="radio" name="q3"><code>.env.production</code></label></div>
+<div class="exercise" data-answer="NEXT_PUBLIC_API_URL"><p>Complete o prefixo que leva a variável para o client:</p><div class="ex-code">process.env.<input class="ex-input" autocomplete="off" spellcheck="false" autocapitalize="off"></div><div class="ex-actions"><button type="button">Verificar</button><span class="ex-result" aria-live="polite"></span></div></div>
+<div class="exercise" data-answer=".local"><p>Complete o que deve entrar no <code>.gitignore</code> para proteger os segredos locais:</p><div class="ex-code">.env<input class="ex-input" autocomplete="off" spellcheck="false" autocapitalize="off"></div><div class="ex-actions"><button type="button">Verificar</button><span class="ex-result" aria-live="polite"></span></div></div>
+<div class="pager"></div>
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

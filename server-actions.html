@@ -1,0 +1,134 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Server Actions ("use server") | Guia Next.js</title><meta name="description" content="Aprenda Server Actions no Next.js: diretiva use server, form action={…} sem JavaScript no cliente, useActionState para estado da action e useFormStatus para o botão de pending.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
+<div class="pager"></div>
+<h1>Server Actions: <code>"use server"</code></h1>
+<p class="intro">A Ana 👩‍💻 tinha um botão de "curtir" que exigia JavaScript: <code>onClick</code> chamando <code>fetch</code> na mão, tratar loading, tratar erro… Ela trocou tudo por um <strong>formulário apontando para uma função do servidor</strong>. Zero JS no cliente: o próprio <code>&lt;form action={curtir}&gt;</code> envia os dados para a action, que roda no servidor. Isso é Server Action.</p>
+<div class="note"><strong>Você vai aprender</strong><ul><li>A diretiva <code>"use server"</code> no topo de um arquivo de actions</li><li><code>&lt;form action={minhaAction}&gt;</code> — form nativo mandando para o servidor</li><li>Ler os campos com <code>formData.get("nome")</code></li><li><code>useActionState</code> para receber estado de volta (erros, sucesso)</li><li><code>useFormStatus</code> para o botão "Enviando…" (pending)</li></ul></div>
+<hr><h2>A ideia: o garçom que anota o pedido na cozinha, não no celular do cliente</h2>
+<p>Num site antigo, o cliente (navegador) telefonava para a cozinha (API) ele mesmo, anotava o pedido e atualizava a tela — muito JavaScript, muita chance de erro. Com Server Action, o <strong>garçom entrega o pedido direto na cozinha</strong>: o formulário HTML nativo faz um POST para uma função que você escreveu no servidor, e a resposta volta como uma nova renderização da página. O navegador nem precisa de JavaScript para isso funcionar.</p>
+<p>Os dados do formulário chegam numa estrutura chamada <code>FormData</code> — um "formulário preenchido" que você lê campo a campo com <code>formData.get("nome")</code>, exatamente igual aos campos <code>name="…"</code> dos inputs. E como a action roda no servidor, ela pode tocar no banco de dados, ler cookies, chamar <code>revalidatePath</code> e até dar <code>redirect</code> — tudo sem mandar código nenhum para o cliente.</p>
+<p>Há duas formas de declarar: <strong>arquivo inteiro de actions</strong> (primeira linha <code>"use server"</code>, cada função exportada vira uma action) ou <strong>inline dentro de um Server Component</strong> (a diretiva dentro da função). A primeira é a mais organizada; a segunda serve para actions descartáveis.</p>
+<h2>Arquivo de actions + formulário que aponta para ela</h2>
+<pre class="file" data-file="app/actions.js">"use server"; // primeira linha: tudo aqui roda no servidor
+
+import { revalidatePath } from "next/cache";
+
+export async function curtirPost(formData) {
+  const postId = formData.get("postId");
+  await db.post.curtir(postId);       // toca o banco direto, sem API no meio
+  revalidatePath("/feed");            // o feed agora mostra o coração cheio
+}</pre>
+<pre class="file" data-file="app/feed/page.jsx (Server Component)">import { curtirPost } from "../actions";
+
+export default function Feed({ posts }) {
+  return (
+    &lt;ul&gt;
+      {posts.map((p) =&gt; (
+        &lt;li key={p.id}&gt;
+          {p.titulo}
+          &lt;form action={curtirPost}&gt;
+            &lt;input type="hidden" name="postId" value={p.id} /&gt;
+            &lt;button&gt;❤ {p.curtidas}&lt;/button&gt;
+          &lt;/form&gt;
+        &lt;/li&gt;
+      ))}
+    &lt;/ul&gt;
+  );
+}</pre>
+<p>Repare: o <code>&lt;form action={curtirPost}&gt;</code> recebe a <strong>função</strong>, não uma string de URL. O Next.js transforma isso num POST seguro para a action. O input hidden leva o <code>postId</code> escondido, como um campo preenchido à mão.</p>
+<h2>Recebendo estado de volta: useActionState + useFormStatus</h2>
+<p>Se a action precisa devolver algo (mensagem de erro, sucesso), quem faz a ponte num Client Component é o <code>useActionState</code> (React 19): ele embrulha a action, guarda o estado que ela devolveu e expõe o <code>pending</code>. Já o <code>useFormStatus</code> lê o estado do formulário pai — só funciona dentro de um componente <strong>filho</strong> do form, e é perfeito para o botão:</p>
+<pre class="file" data-file="app/contato/ContatoForm.jsx">"use client";
+
+import { useActionState } from "react";
+import { useFormStatus } from "react-dom";
+import { enviarMensagem } from "../actions";
+
+function BotaoEnviar() {
+  const { pending } = useFormStatus(); // true enquanto a action roda
+  return (
+    &lt;button disabled={pending}&gt;
+      {pending ? "Enviando… ⏳" : "Enviar"}
+    &lt;/button&gt;
+  );
+}
+
+export default function ContatoForm() {
+  const [state, formAction] = useActionState(enviarMensagem, { ok: false, erro: "" });
+  return (
+    &lt;form action={formAction}&gt;
+      &lt;input name="email" placeholder="seu@email" /&gt;
+      &lt;BotaoEnviar /&gt;
+      {state.erro && &lt;small style={{ color: "red" }}&gt;{state.erro}&lt;/small&gt;}
+      {state.ok && &lt;p&gt;Mensagem enviada! 🎉&lt;/p&gt;}
+    &lt;/form&gt;
+  );
+}</pre>
+<pre class="file" data-file="app/actions.js (a action com retorno)">"use server";
+
+export async function enviarMensagem(estadoAnterior, formData) {
+  const email = formData.get("email");
+  if (!email || !email.includes("@")) {
+    return { ok: false, erro: "E-mail inválido" };
+  }
+  await db.mensagem.create({ email });
+  return { ok: true, erro: "" };
+}</pre>
+<table class="ref">
+<tr><th>Peça</th><th>Onde fica</th><th>Para que serve</th></tr>
+<tr><td><code>"use server"</code> (linha 1 do arquivo)</td><td>arquivo de actions</td><td>marca todas as funções exportadas como Server Actions</td></tr>
+<tr><td><code>"use server"</code> (dentro da função)</td><td>Server Component</td><td>action inline, só aquela função</td></tr>
+<tr><td><code>&lt;form action={fn}&gt;</code></td><td>Server ou Client Component</td><td>envia o form para a função do servidor, sem JS</td></tr>
+<tr><td><code>formData.get("campo")</code></td><td>dentro da action</td><td>lê o campo <code>name="campo"</code> do formulário</td></tr>
+<tr><td><code>useActionState(fn, inicial)</code></td><td>Client Component</td><td>chama a action e guarda o estado retornado → <code>[state, formAction, pending]</code></td></tr>
+<tr><td><code>useFormStatus()</code></td><td>Client Component filho do form</td><td>dá acesso a <code>{ pending }</code> do form pai</td></tr>
+</table>
+<div class="tryreact" data-goal="useActionState|formAction"><p class="try-task"><strong>Missão:</strong> simulando o <code>useActionState</code>: o componente deve guardar o <code>estado</code> devolvido pela "action" e mostrar "Enviado ✔" quando <code>estado.ok</code> for verdadeiro. Complete com <code>useState</code> + função que simula a action, e o botão que chama <code>enviar</code> (dica: o botão usa <code>formAction</code>-style: passe a função direto no onClick).</p><pre class="script" data-file="App.jsx">function App() {
+  // simula: const [state, formAction] = useActionState(enviar, { ok: false })
+  const [state, setState] = React.useState({ ok: false });
+
+  // 👉 simule a Server Action: devolve { ok: true } depois de "enviar"
+  function enviar() {
+    setState({ ok: true });
+  }
+
+  return (
+    &lt;div style={{ fontFamily: "sans-serif", padding: 16 }}&gt;
+      &lt;form onSubmit={(e) => { e.preventDefault(); /* 👉 chame a action aqui */ }}&gt;
+        &lt;button&gt;Enviar (action no servidor)&lt;/button&gt;
+      &lt;/form&gt;
+      {state.ok && &lt;p&gt;Enviado ✔&lt;/p&gt;}
+    &lt;/div&gt;
+  );
+}</pre><pre class="solucao" data-file="App.jsx">function App() {
+  const [state, setState] = React.useState({ ok: false });
+
+  function enviar() {
+    // no Next seria: await enviarMensagem(formData) no servidor
+    setState({ ok: true });
+  }
+
+  return (
+    &lt;div style={{ fontFamily: "sans-serif", padding: 16 }}&gt;
+      &lt;form onSubmit={(e) => { e.preventDefault(); enviar(); }}&gt;
+        &lt;button&gt;Enviar (action no servidor)&lt;/button&gt;
+      &lt;/form&gt;
+      {state.ok && &lt;p&gt;Enviado ✔&lt;/p&gt;}
+    &lt;/div&gt;
+  );
+}</pre></div>
+<figure class="tela"><img src="assets/telas/server-actions.png" alt="Formulário com action={curtir} apontando para a Server Action, sem JavaScript no cliente" width="1280" height="800" loading="lazy"><figcaption>O <code>&lt;form action={curtirPost}&gt;</code> faz o POST para o servidor sozinho — o navegador não precisa de JS para enviar.</figcaption></figure>
+<h2>Quando dá errado</h2>
+<div class="warning"><strong>Erro:</strong> passar uma função normal de Client Component como <code>action</code> — o Next.js só aceita Server Action:</div>
+<pre class="out">Error: Functions cannot be passed directly to Client Components…
+  &lt;form action={function} …&gt;
+Either remove the event handler or mark the function with "use server".</pre>
+<p>Tradução: funções não podem ser passadas para Client Components a menos que sejam Server Actions. <strong>Correção:</strong> ou a função vem de um arquivo com <code>"use server"</code> na primeira linha, ou você declara <code>"use server"</code> dentro dela num Server Component. Outro erro comum: chamar <code>formData.get()</code> no lugar errado — dentro da action o 1º argumento é o <code>formData</code> (ou o estado anterior, no caso do <code>useActionState</code>); confundir os dois devolve <code>undefined</code>.</p>
+<h2>Exercícios</h2>
+<div class="mc" data-answer="3"><p class="mc-q">1. O que a diretiva <code>"use server"</code> na primeira linha de um arquivo faz?</p><label><input type="radio">Marca a página inteira como estática</label><label><input type="radio">Transforma o fetch em cacheado</label><label><input type="radio">Transforma todas as funções exportadas do arquivo em Server Actions</label><label><input type="radio">Esconde o código-fonte do servidor</label><p class="mc-feedback"></p></div>
+<div class="mc" data-answer="1"><p class="mc-q">2. Como o formulário chama uma Server Action sem JavaScript no cliente?</p><label><input type="radio"><code>&lt;form action={minhaAction}&gt;</code></label><label><input type="radio"><code>&lt;form onSubmit={minhaAction}&gt;</code></label><label><input type="radio"><code>&lt;button fetch=&quot;/api&quot;&gt;</code></label><label><input type="radio"><code>&lt;form action="/api/enviar&quot;&gt;</code> com useEffect</label><p class="mc-feedback"></p></div>
+<div class="exercise" data-regex="formData\.get\(.titulo.\)"><p><strong>3. Complete:</strong> dentro de uma Server Action, como você lê o valor do campo <code>&lt;input name="titulo"&gt;</code>?</p><div class="ex-code"><input class="ex-input" type="text" placeholder="escreva aqui…" style="width:100%"></div><div class="ex-actions"><button type="button">Verificar</button></div><p class="ex-result"></p></div>
+<div class="pager"></div></div></main></div><script src="assets/site.js"></script></body></html>

@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projeto: Dashboard com auth, gráficos e tabela | Guia Next.js</title>
+<meta name="description" content="Projeto guiado: um dashboard protegido por login (cookie httpOnly + middleware), com tabela paginada no servidor (searchParams), gráfico em biblioteca de cliente carregada com dynamic ssr:false e páginas ozn' em Server Components assíncronos.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+<div class="pager"></div>
+<h1>Projeto: Dashboard com auth, gráficos e tabela</h1>
+<p class="intro">A Ana precisa de um painel interno para ver as vendas: só quem está logado pode entrar, a tabela de pedidos é grande (pagina no servidor) e o gráfico é pesado (carrega só no navegador). Neste projeto você monta esse dashboard juntando proteção de rotas com <code>middleware</code>, dados assíncronos no servidor e um componente de gráfico isolado num chunk separado.</p>
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>Login simples: Server Action que seta um <code>cookie httpOnly</code> de sessão</li>
+<li><code>middleware.js</code> protegendo rotas: checa o cookie e redireciona para <code>/login</code></li>
+<li>Tabela com paginação no servidor via <code>searchParams</code> (<code>?pagina=2</code>)</li>
+<li>Gráfico com biblioteca pesada (ex.: recharts) via <code>dynamic(..., { ssr: false })</code></li>
+<li>Layout aninhado <code>app/dashboard/layout.jsx</code> com o menu lateral</li>
+</ul></div>
+<hr>
+<h2>A ideia: a sala do gerente com crachá na porta</h2>
+<p>O dashboard é a <strong>sala do gerente</strong>: só entra quem mostra o crachá na porta. Esse crachá é um <strong>cookie httpOnly</strong> (o navegador manda sozinho em toda requisição, mas o JavaScript da página não consegue ler — então não dá para roubar por XSS), conferido pelo <code>middleware</code> em todas as rotas de <code>/dashboard</code>. Dentro da sala, a tabela de pedidos é paginada <strong>no servidor</strong> (a página 2 vem pronta do servidor via <code>?pagina=2</code>, não com 10 mil linhas no navegador), e o gráfico, que é pesado, só é montado no navegador.</p>
+<p>O truque do gráfico: bibliotecas de gráfico acessam <code>window</code> e quebram o SSR. A solução é o <code>dynamic(() => import('./Grafico'), { ssr: false })</code> dentro de um Client Component — o chunk baixa só quando a página do dashboard abre, e o resto do app continua leve (você viu isso na aula de bundle).</p>
+<h2>Passo 1 — login com cookie httpOnly + middleware</h2>
+<pre class="file" data-file="app/login/actions.js">'use server';
+
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+
+const SENHA = process.env.DASH_SENHA; // em produção: hash + banco de usuários (Auth.js)
+
+export async function login(formData) {
+  const senha = formData.get('senha');
+  if (senha !== SENHA) {
+    return { erro: 'Senha incorreta' };
+  }
+  const jar = await cookies();
+  jar.set('sessao', 'logado', {
+    httpOnly: true,       // o JS do navegador NÃO lê esse cookie
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 60 * 60 * 8,  // 8 horas
+  });
+  redirect('/dashboard');
+}</pre>
+<pre class="file" data-file="middleware.js">import { NextResponse } from 'next/server';
+
+export function middleware(req) {
+  const sessao = req.cookies.get('sessao')?.value;
+  const protegido = req.nextUrl.pathname.startsWith('/dashboard');
+
+  if (protegido &amp;&amp; sessao !== 'logado') {
+    return NextResponse.redirect(new URL('/login', req.url));
+  }
+  if (req.nextUrl.pathname === '/login' &amp;&amp; sessao === 'logado') {
+    return NextResponse.redirect(new URL('/dashboard', req.url));
+  }
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: ['/dashboard/:path*', '/login'], // só roda o middleware nessas rotas
+};
+// ⚠ o middleware roda no Edge — não dá para usar fs/Prisma aqui</pre>
+<h2>Passo 2 — layout do dashboard e a tabela paginada no servidor</h2>
+<pre class="file" data-file="app/dashboard/layout.jsx">import Link from 'next/link';
+
+export default function DashboardLayout({ children }) {
+  return (
+    &lt;div style={{ display: 'flex' }}&gt;
+      &lt;nav style={{ width: 200, padding: 16, borderRight: '1px solid #ccc' }}&gt;
+        &lt;strong&gt;📊 Painel&lt;/strong&gt;
+        &lt;ul&gt;
+          &lt;li&gt;&lt;Link href="/dashboard"&gt;Visão geral&lt;/Link&gt;&lt;/li&gt;
+          &lt;li&gt;&lt;Link href="/dashboard/pedidos"&gt;Pedidos&lt;/Link&gt;&lt;/li&gt;
+        &lt;/ul&gt;
+      &lt;/nav&gt;
+      &lt;main style={{ flex: 1, padding: 16 }}&gt;{children}&lt;/main&gt;
+    &lt;/div&gt;
+  );
+}</pre>
+<pre class="file" data-file="app/dashboard/pedidos/page.jsx">import Link from 'next/link';
+
+// dados mockados — troque por Prisma/ banco depois
+async function getPedidos(pagina) {
+  const TODOS = Array.from({ length: 137 }, (_, i) =&gt; ({
+    id: 1000 + i, cliente: `Cliente ${i + 1}`, total: (Math.random() * 500).toFixed(2), status: i % 3 ? 'pago' : 'pendente',
+  }));
+  const POR_PAGINA = 20;
+  return {
+    itens: TODOS.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA),
+    totalPaginas: Math.ceil(TODOS.length / POR_PAGINA),
+  };
+}
+
+export default async function Pedidos({ searchParams }) {
+  const { pagina = '1' } = await searchParams; // Next.js 15: searchParams é Promise
+  const { itens, totalPaginas } = await getPedidos(Number(pagina));
+
+  return (
+    &lt;&gt;
+      &lt;h1&gt;📦 Pedidos&lt;/h1&gt;
+      &lt;table className="ref"&gt;
+        &lt;thead&gt;&lt;tr&gt;&lt;th&gt;ID&lt;/th&gt;&lt;th&gt;Cliente&lt;/th&gt;&lt;th&gt;Total&lt;/th&gt;&lt;th&gt;Status&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;
+        &lt;tbody&gt;
+          {itens.map(p =&gt; (
+            &lt;tr key={p.id}&gt;
+              &lt;td&gt;#{p.id}&lt;/td&gt;&lt;td&gt;{p.cliente}&lt;/td&gt;&lt;td&gt;R$ {p.total}&lt;/td&gt;&lt;td&gt;{p.status}&lt;/td&gt;
+            &lt;/tr&gt;
+          ))}
+        &lt;/tbody&gt;
+      &lt;/table&gt;
+      &lt;p&gt;
+        {Array.from({ length: totalPaginas }, (_, i) =&gt; i + 1).map(n =&gt; (
+          &lt;Link key={n} href={`/dashboard/pedidos?pagina=${n}`} style={{ marginRight: 8 }}&gt;
+            {n === Number(pagina) ? &lt;strong&gt;{n}&lt;/strong&gt; : n}
+          &lt;/Link&gt;
+        ))}
+      &lt;/p&gt;
+    &lt;/&gt;
+  );
+}</pre>
+<h2>Passo 3 — o gráfico pesado só no cliente</h2>
+<pre class="file" data-file="app/dashboard/page.jsx">import dynamic from 'next/dynamic';
+import { Suspense } from 'react';
+
+// recharts usa window → só pode renderizar no navegador
+const GraficoVendas = dynamic(() =&gt; import('@/components/GraficoVendas'), {
+  ssr: false,
+  loading: () =&gt; &lt;p&gt;📊 Carregando gráfico…&lt;/p&gt;,
+});
+
+async function getResumo() {
+  // no servidor: busca os números (banco/API) — aqui mockado
+  return { vendasHoje: 1240, pedidos: 37, clientes: 12 };
+}
+
+export default async function Dashboard() {
+  const resumo = await getResumo();
+  return (
+    &lt;main&gt;
+      &lt;h1&gt;📊 Visão geral&lt;/h1&gt;
+      &lt;p&gt;Vendas hoje: R$ {resumo.vendasHoje} · Pedidos: {resumo.pedidos} · Novos clientes: {resumo.clientes}&lt;/p&gt;
+      &lt;Suspense fallback={&lt;p&gt;⏳ …&lt;/p&gt;}&gt;
+        &lt;GraficoVendas /&gt;
+      &lt;/Suspense&gt;
+    &lt;/main&gt;
+  );
+}</pre>
+<pre class="file" data-file="components/GraficoVendas.jsx">'use client';
+
+import { LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
+
+const DADOS = [
+  { mes: 'jan', vendas: 400 }, { mes: 'fev', vendas: 650 }, { mes: 'mar', vendas: 900 },
+];
+
+export default function GraficoVendas() {
+  return (
+    &lt;LineChart width={600} height={300} data={DADOS}&gt;
+      &lt;XAxis dataKey="mes" /&gt;&lt;YAxis /&gt;&lt;Tooltip /&gt;
+      &lt;Line type="monotone" dataKey="vendas" stroke="#8884d8" /&gt;
+    &lt;/LineChart&gt;
+  );
+}</pre>
+<figure class="tela"><img src="assets/telas/proj-dashboard.png" alt="Dashboard protegido com tabela paginada e gráfico" width="1280" height="800" loading="lazy"><figcaption>Dashboard protegido por middleware, com tabela paginada no servidor e gráfico carregado só no cliente.</figcaption></figure>
+<div class="tryreact" data-goal="ssr"><p class="try-task"><strong>Missão:</strong> no código abaixo, o gráfico está comentado. Complete a linha do dynamic import com a opção que <strong>desliga o SSR</strong> do componente (o gráfico só pode renderizar no navegador): <code>{ ssr: false }</code>. Rode e clique em <em>Verificar missão</em>.</p><pre class="script" data-file="app/dashboard/page.jsx">// no Next.js: import dynamic from 'next/dynamic';
+const dynamic = (fn, opts) =&gt; fn().then ? null : null; // (simulação)
+
+function App() {
+  // TODO: use dynamic(() =&gt; Promise.resolve({ default: Grafico })) com { ssr: false }
+  const Grafico = () =&gt; &lt;p&gt;📊 gráfico (só no navegador)&lt;/p&gt;;
+  return (
+    &lt;div&gt;
+      &lt;h1&gt;📊 Dashboard&lt;/h1&gt;
+      &lt;Grafico /&gt;
+    &lt;/div&gt;
+  );
+}</pre><pre class="solucao" data-file="app/dashboard/page.jsx">function App() {
+  // dynamic(() =&gt; import('./Grafico'), { ssr: false })
+  const Grafico = () =&gt; &lt;p&gt;📊 gráfico (só no navegador — ssr: false)&lt;/p&gt;;
+  return (
+    &lt;div&gt;
+      &lt;h1&gt;📊 Dashboard&lt;/h1&gt;
+      &lt;Grafico /&gt;
+    &lt;/div&gt;
+  );
+}</pre></div>
+<h2>Quando dá errado</h2>
+<div class="warning"><strong>Erro real:</strong> o gráfico quebra o build/SSR com <code>window is not defined</code> porque esqueceu o <code>ssr: false</code>:</div>
+<pre class="out">ReferenceError: window is not defined
+    at GraficoVendas (components/GraficoVendas.jsx)
+→ dynamic(() =&gt; import('./GraficoVendas'), { ssr: false }) dentro de 'use client'&lt;/n  (e NUNCA ssr:false em Server Component — o Next.js proíbe)</pre>
+<div class="warning"><strong>Outro clássico:</strong> o middleware protegendo <code>/dashboard</code>, mas o login broke porque o matcher esqueceu a rota — ou o cookie foi setado com <code>path</code> errado. E cuidado: middleware roda no <strong>Edge</strong>, sem acesso a <code>fs</code>/banco pesado:</div>
+<pre class="out">Module not found: Can't resolve 'fs' in middleware
+→ no middleware só dá para ler cookie/headers e redirecionar;
+  a checagem pesada de usuário fica no layout/página (servidor)</pre>
+<h2>Exercícios</h2>
+<div class="mc" data-answer="2"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">O cookie de sessão deve ser:</p><label><input type="radio" name="q1"><code>httpOnly: false</code> para o React ler</label><label><input type="radio" name="q1"><code>httpOnly: true</code> — o navegador envia sozinho, mas o JS da página não lê (anti-XSS)</label><label><input type="radio" name="q1">desnecessário em dashboard</label></div>
+<div class="mc" data-answer="3"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">A paginação da tabela vem no servidor via:</p><label><input type="radio" name="q2"><code>useState</code> no cliente</label><label><input type="radio" name="q2">Carregar tudo e esconder com CSS</label><label><input type="radio" name="q2"><code>searchParams</code> (<code>?pagina=2</code>) lido no Server Component</label></div>
+<div class="mc" data-answer="1"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">O <code>middleware.js</code> com <code>matcher</code> em <code>/dashboard/:path*</code> serve para:</p><label><input type="radio" name="q3">Proteger as rotas: sem cookie de sessão, redireciona para <code>/login</code></label><label><input type="radio" name="q3">Criar o gráfico</label><label><input type="radio" name="q3">Gerar imagens estáticas</label></div>
+<div class="exercise" data-answer="true"><p>Complete o cookie seguro de sessão:</p><div class="ex-code">jar.set('sessao', 'logado', { httpOnly: <input class="ex-input" autocomplete="off" spellcheck="false" autocapitalize="off">, path: '/' })</div><div class="ex-actions"><button type="button">Verificar</button><span class="ex-result" aria-live="polite"></span></div></div>
+<div class="exercise" data-answer="/dashboard/:path*"><p>Complete o matcher do middleware que protege o dashboard:</p><div class="ex-code">matcher: ['<input class="ex-input" autocomplete="off" spellcheck="false" autocapitalize="off">']</div><div class="ex-actions"><button type="button">Verificar</button><span class="ex-result" aria-live="polite"></span></div></div>
+<div class="pager"></div>
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

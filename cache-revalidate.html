@@ -1,0 +1,111 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cache e revalidação | Guia Next.js</title><meta name="description" content="Domine a invalidação de cache no Next.js: revalidatePath para limpar rotas inteiras, revalidateTag para etiquetas do fetch, e unstable_cache para cachear funções que não usam fetch.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
+<div class="pager"></div>
+<h1>Cache e revalidação</h1>
+<p class="intro">A Ana 👩‍💻 tinha um blog cacheado por 60 segundos. Ela publicava um post novo, clicava no blog… e continuava vendo a versão antiga. O problema: o cache estava <em>velho demais</em> sem ninguém avisar. Nesta página você aprende a <strong>invalidar o cache na hora certa</strong>: <code>revalidatePath</code> para rotas inteiras, <code>revalidateTag</code> para as etiquetas do fetch, e <code>unstable_cache</code> para cachear funções suas que não usam fetch.</p>
+<div class="note"><strong>Você vai aprender</strong><ul><li><code>revalidatePath("/blog")</code> dentro de uma Server Action, depois de salvar</li><li><code>revalidateTag("posts")</code> e a etiqueta <code>next: { tags: […] }</code> do fetch</li><li><code>unstable_cache</code> para embrulhar funções (ex: consulta ao banco)</li><li>Onde essas funções podem ser chamadas (só no servidor)</li></ul></div>
+<hr><h2>A ideia: a vitrine da loja e o botão "atualizar agora"</h2>
+<p>Uma loja coloca os produtos numa vitrine de vidro: enquanto ninguém mexe, a vitrine mostra o que foi montado (isso é o cache). Quando chega produto novo, o funcionário não precisa trocar a loja inteira — ele só <strong>tira a etiqueta do produto da vitrine</strong> e a próxima pessoa que olhar já vê o preço novo. Esse "tirar a etiqueta" é o <code>revalidateTag("posts")</code>: você batiza um conjunto de caches com uma etiqueta e, quando chama a função com essa etiqueta, todos eles são descartados de uma vez.</p>
+<p>Se a mudança é maior — mudou o layout da seção inteira, o menu, a home — aí o funcionário troca a <strong>vitrine inteira</strong>: é o <code>revalidatePath("/blog")</code>, que limpa o cache de uma rota específica (e, com <code>"/blog", "layout"</code>, todas as páginas abaixo dela).</p>
+<p>E quando a fonte de dados não é um <code>fetch</code> — é uma consulta direta no banco, uma leitura de arquivo? Aí não existe fetch para pendurar etiqueta, então você embrulha a sua função com <code>unstable_cache</code>, que faz o mesmo serviço: guarda o resultado, dá uma chave e aceita etiquetas e tempo de revalidação.</p>
+<h2>Invalidando depois de uma escrita (Server Action)</h2>
+<p>O fluxo completo: o usuário envia um formulário → a Server Action salva no banco → <strong>antes de responder, a action invalida o cache</strong> → a próxima visita já vê o dado novo:</p>
+<pre class="file" data-file="app/actions.js">"use server";
+
+import { revalidatePath, revalidateTag } from "next/cache";
+import { redirect } from "next/navigation";
+
+export async function criarPost(formData) {
+  const titulo = formData.get("titulo");
+  await db.post.create({ titulo }); // salva no banco
+
+  revalidateTag("posts");   // invalida todo fetch com tags: ["posts"]
+  revalidatePath("/blog");  // invalida a rota /blog inteira (e abaixo, com "layout")
+  // revalidatePath("/", "layout") invalida TUDO abaixo da raiz
+
+  redirect("/blog");        // manda o navegador para a lista atualizada
+}</pre>
+<h2>Cacheando a própria função: unstable_cache</h2>
+<pre class="file" data-file="app/lib/posts.js">import { unstable_cache } from "next/cache";
+
+async function buscarPostsNoBanco() {
+  // consulta direta no banco — não passa pelo fetch, então não tem cache automático
+  return db.post.findMany();
+}
+
+export const getPosts = unstable_cache(
+  buscarPostsNoBanco,
+  ["posts"],                          // chave única do cache
+  { tags: ["posts"], revalidate: 60 } // mesma ideia do fetch
+);
+
+// uso na página:
+// const posts = await getPosts();</pre>
+<p>O <code>unstable_cache</code> guarda o resultado da função (tem que ser serializável — objetos puros, arrays, strings, números) e só recalcula quando a chave muda, quando passa o <code>revalidate</code>, ou quando alguém chama <code>revalidateTag</code> com a mesma etiqueta.</p>
+<table class="ref">
+<tr><th>Função</th><th>Onde chama</th><th>O que invalida</th></tr>
+<tr><td><code>revalidatePath("/blog")</code></td><td>Server Action / Route Handler</td><td>o cache da rota exata <code>/blog</code></td></tr>
+<tr><td><code>revalidatePath("/blog", "layout")</code></td><td>Server Action / Route Handler</td><td><code>/blog</code> e <strong>todas as rotas abaixo</strong></td></tr>
+<tr><td><code>revalidateTag("posts")</code></td><td>Server Action / Route Handler</td><td>todo fetch/função com <code>tags: ["posts"]</code></td></tr>
+<tr><td><code>unstable_cache(fn, ["chave"], { tags, revalidate })</code></td><td>qualquer código de servidor</td><td>cache da sua função, por chave/etiqueta/tempo</td></tr>
+<tr><td><code>export const revalidate = 60</code> na página</td><td>na própria page.jsx</td><td>ISR por rota: recria a página em segundo plano após 60s</td></tr>
+</table>
+<div class="tryreact" data-goal="delete|invalida|limpa|remove"><p class="try-task"><strong>Missão:</strong> a Ana tem um "cache" (um objeto) e uma função <code>salvarPost</code> que guarda no cache. Complete a função <code>invalidarCache</code> para <strong>apagar a chave</strong> do cache (use <code>delete cache[chave]</code>), simulando o <code>revalidateTag</code>. Rode: salve um post, invalide, e confira que a lista voltou vazia.</p><pre class="script" data-file="App.jsx">function App() {
+  // simulando o Data Cache do Next
+  const cache = {};
+  const [log, setLog] = React.useState([]);
+
+  function salvarPost(titulo) {
+    cache["posts"] = [{ titulo }];
+    setLog((l) => [...l, `salvo: ${titulo} (cache preenchido)`]);
+  }
+
+  // 👉 apague a chave "posts" do cache (é o revalidateTag)
+  function invalidarCache() {
+    setLog((l) => [...l, "cache invalidado ✔"]);
+  }
+
+  return (
+    &lt;div style={{ fontFamily: "sans-serif", padding: 16 }}&gt;
+      &lt;button onClick={() => salvarPost("Post novo")}&gt;Salvar post&lt;/button&gt;
+      &lt;button onClick={invalidarCache}&gt;Invalidar cache (revalidateTag)&lt;/button&gt;
+      &lt;p&gt;cache: {JSON.stringify(cache)}&lt;/p&gt;
+      &lt;ul&gt;{log.map((l, i) => &lt;li key={i}&gt;{l}&lt;/li&gt;)}&lt;/ul&gt;
+    &lt;/div&gt;
+  );
+}</pre><pre class="solucao" data-file="App.jsx">function App() {
+  const cache = {};
+  const [log, setLog] = React.useState([]);
+
+  function salvarPost(titulo) {
+    cache["posts"] = [{ titulo }];
+    setLog((l) => [...l, `salvo: ${titulo} (cache preenchido)`]);
+  }
+
+  function invalidarCache() {
+    delete cache["posts"]; // revalidateTag("posts")
+    setLog((l) => [...l, "cache invalidado ✔"]);
+  }
+
+  return (
+    &lt;div style={{ fontFamily: "sans-serif", padding: 16 }}&gt;
+      &lt;button onClick={() => salvarPost("Post novo")}&gt;Salvar post&lt;/button&gt;
+      &lt;button onClick={invalidarCache}&gt;Invalidar cache (revalidateTag)&lt;/button&gt;
+      &lt;p&gt;cache: {JSON.stringify(cache)}&lt;/p&gt;
+      &lt;ul&gt;{log.map((l, i) => &lt;li key={i}&gt;{l}&lt;/li&gt;)}&lt;/ul&gt;
+    &lt;/div&gt;
+  );
+}</pre></div>
+<figure class="tela"><img src="assets/telas/cache-revalidate.png" alt="Server Action chamando revalidateTag e revalidatePath depois de salvar no banco" width="1280" height="800" loading="lazy"><figcaption>Depois de salvar, a Server Action chama <code>revalidateTag("posts")</code> e <code>revalidatePath("/blog")</code> — a próxima visita já vê o dado novo.</figcaption></figure>
+<h2>Quando dá errado</h2>
+<div class="warning"><strong>Erro:</strong> chamar <code>revalidatePath</code>/<code>revalidateTag</code> fora do servidor (num Client Component) — a importação até existe, mas a chamada falha:</div>
+<pre class="out">Error: Route "/" used revalidatePath. revalidatePath can only be called in a Server Action or Route Handler — not in a Client Component.</pre>
+<p>Tradução: <code>revalidatePath</code> só pode ser chamado numa Server Action ou Route Handler. <strong>Correção:</strong> mova a invalidação para dentro da sua action (depois do <code>await db…</code>) ou para dentro de uma rota de API. Outro erro sorrateiro: por <code>tags</code> no fetch mas chamar <code>revalidateTag</code> com a etiqueta errada — nada invalida e o cache segue velho. Sempre confira a ortografia da etiqueta.</p>
+<h2>Exercícios</h2>
+<div class="mc" data-answer="2"><p class="mc-q">1. O que <code>revalidateTag("posts")</code> faz?</p><label><input type="radio">Apaga o banco de dados</label><label><input type="radio">Invalida todo cache marcado com a etiqueta "posts"</label><label><input type="radio">Limpa só a rota /posts</label><label><input type="radio">Muda a etiqueta para "posts-v2"</label><p class="mc-feedback"></p></div>
+<div class="mc" data-answer="3"><p class="mc-q">2. Para invalidar <code>/blog</code> <em>e todas as sub-rotas</em> de uma vez, o que usar?</p><label><input type="radio"><code>revalidatePath("/blog")</code></label><label><input type="radio"><code>revalidateTag("/blog")</code></label><label><input type="radio"><code>revalidatePath("/blog", "layout")</code></label><label><input type="radio"><code>revalidatePath("/", "page")</code></label><p class="mc-feedback"></p></div>
+<div class="exercise" data-regex="unstable_cache"><p><strong>3. Complete:</strong> para cachear uma função própria que acessa o banco (sem fetch), qual função do <code>next/cache</code> você usa?</p><div class="ex-code"><input class="ex-input" type="text" placeholder="escreva aqui…" style="width:100%"></div><div class="ex-actions"><button type="button">Verificar</button></div><p class="ex-result"></p></div>
+<div class="pager"></div></div></main></div><script src="assets/site.js"></script></body></html>

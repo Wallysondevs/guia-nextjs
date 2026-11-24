@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deploy na Vercel: push no GitHub e no ar | Guia Next.js</title>
+<meta name="description" content="Conecte o repositório do GitHub à Vercel e cada push na main vira deploy automático de produção; cada branch/PR ganha um preview. Veja comandos da CLI (vercel), variáveis por ambiente e como ler os logs de build.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+<div class="pager"></div>
+<h1>Deploy na Vercel: push no GitHub e no ar</h1>
+<p class="intro">Até aqui o app da Ana vivia só no <code>localhost</code> dela. Hoje ela vai colocar no ar de verdade: basta conectar o repositório do GitHub na <strong>Vercel</strong> e cada <code>git push</code> na <code>main</code> vira um deploy automático de produção — e cada branch ou Pull Request ganha uma URL de <em>preview</em> para testar antes. Nesta aula você faz esse caminho inteiro.</p>
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>Criar o projeto na Vercel apontando para o repositório do GitHub</li>
+<li><code>main</code> → produção automática; branch/PR → <em>preview deployment</em> com URL própria</li>
+<li>Build command padrão (<code>next build</code>), Node version e pasta de saída (<code>.next</code>)</li>
+<li>CLI: <code>npm i -g vercel</code>, <code>vercel</code> (preview local) e <code>vercel --prod</code></li>
+<li>Ler os logs de build quando dá erro e setar variáveis de ambiente por escopo (Production/Preview/Development)</li>
+<li>Rollback instantâneo para um deploy anterior</li>
+</ul></div>
+<hr>
+<h2>A ideia: a loja com vitrine na rua e a versão de teste nos fundos</h2>
+<p>Publicar na Vercel é como abrir uma loja: a <strong>endereço principal</strong> (<code>meusite.vercel.app</code>, ou o domínio próprio) é a vitrine de produção — só entra o que passou no controle de qualidade, ou seja, o que está na branch <code>main</code> depois de um push. Já cada <strong>branch nova</strong> ganha uma URL temporária nos fundos da loja (o preview), onde o time testa a reforma antes de trocar a vitrine de verdade. E se a vitrine nova quebrar, você volta para a anterior em um clique (rollback) — sem rebuild, porque cada deploy guarda uma cópia pronta.</p>
+<p>O fluxo inteiro é: <code>git push origin main</code> → o GitHub avisa a Vercel → a Vercel clona o código, roda <code>npm install</code> e <code>next build</code> numa máquina limpa → gera os estáticos, testa e publica → em segundos a URL de produção já serve a versão nova. Se o build falhar, a produção <strong>continua no ar</strong> com a versão anterior — o deploy novo só entra se o build passar inteiro.</p>
+<h2>Passo a passo</h2>
+<pre class="file" data-file="terminal"># 1) suba o projeto pro GitHub (se ainda não subiu)
+git init
+git add .
+git commit -m "app next.js pronto"
+git remote add origin https://github.com/ana/meu-app.git
+git push -u origin main</pre>
+<pre class="file" data-file="passos na Vercel (web)">1. vercel.com → Add New → Project
+2. Import Git Repository → escolha ana/meu-app
+3. Framework Preset: Next.js (detectado sozinho)
+   Build Command: next build      Output: .next
+4. Environment Variables → cole as variáveis (próxima aula detalha)
+5. Deploy → em ~1 min: https://meu-app.vercel.app no ar 🎉</pre>
+<pre class="file" data-file="terminal"># CLI opcional: preview local e deploy manual
+npm i -g vercel
+vercel login
+vercel          # gera URL de preview (branch atual)
+vercel --prod   # publica em produção direto pela CLI</pre>
+<pre class="file" data-file="vercel.json">{ // opcional: ajustes do projeto
+  "buildCommand": "next build",
+  "installCommand": "npm install",
+  "framework": "nextjs"
+}</pre>
+<h2>Branch → preview, main → produção</h2>
+<pre class="out">git checkout -b nova-home
+# … edita, commita …
+git push origin nova-home
+→ Vercel cria: https://meu-app-git-nova-home-ana.vercel.app  (preview)
+→ abre PR no GitHub: cada commit novo ganha outro preview (bot da Vercel comenta a URL)
+→ merge na main: https://meu-app.vercel.app atualizada (produção)</pre>
+<div class="tryreact" data-goal="production"><p class="try-task"><strong>Missão:</strong> o código abaixo simula o "modo" do app: em desenvolvimento ele mostra um aviso amarelo; em produção, o selo verde. Mude a constante <code>const MODO = 'development'</code> para <code>const MODO = 'production'</code> (é o que a Vercel seta automaticamente com <code>NODE_ENV=production</code> no build de produção). Rode para ver o selo mudar. Depois clique em <em>Verificar missão</em>.</p><pre class="script" data-file="App.jsx">const MODO = 'development'; // a Vercel seta 'production' no deploy de verdade
+
+function App() {
+  const prod = MODO === 'production';
+  return (
+    &lt;div&gt;
+      &lt;h1&gt;🚀 Meu App&lt;/h1&gt;
+      {prod
+        ? &lt;p style={{color:'green'}}&gt;✅ Rodando em PRODUÇÃO (Vercel, NODE_ENV=production)&lt;/p&gt;
+        : &lt;p style={{color:'orange'}}&gt;🛠️ Modo desenvolvimento (localhost)&lt;/p&gt;}
+      &lt;p&gt;MODO = {MODO}&lt;/p&gt;
+    &lt;/div&gt;
+  );
+}</pre><pre class="solucao" data-file="App.jsx">const MODO = 'production';
+
+function App() {
+  const prod = MODO === 'production';
+  return (
+    &lt;div&gt;
+      &lt;h1&gt;🚀 Meu App&lt;/h1&gt;
+      {prod
+        ? &lt;p style={{color:'green'}}&gt;✅ Rodando em PRODUÇÃO (Vercel, NODE_ENV=production)&lt;/p&gt;
+        : &lt;p style={{color:'orange'}}&gt;🛠️ Modo desenvolvimento (localhost)&lt;/p&gt;}
+      &lt;p&gt;MODO = {MODO}&lt;/p&gt;
+    &lt;/div&gt;
+  );
+}</pre></div>
+<figure class="tela"><img src="assets/telas/n3-vercel-deploy.png" alt="Painel da Vercel com deploys de produção e preview" width="1280" height="800" loading="lazy"><figcaption>Cada push na main vira deploy de produção; cada branch/PR ganha um preview com URL própria.</figcaption></figure>
+<h2>Quando dá errado</h2>
+<div class="warning"><strong>O clássico "funciona na minha máquina":</strong> o build passa no notebook da Ana e quebra na Vercel. Quase sempre é diferença de versão do Node (a Vercel usa a versão do <code>package.json</code> → campo <code>"engines"</code>) ou arquivo commitado errado ( faltou <code>.gitignore</code> com <code>.env.local</code> — aula de variáveis). Veja em: Vercel → Deploy → Build Logs:</div>
+<pre class="out">npm ERR! code ENOENT …  /  Failed at the meu-app@1.0.0 build script.
+→ rode `npm run build` localmente antes de pushar; confira a versão do Node
+  (package.json → "engines": { "node": "20.x" }) e o .gitignore.</pre>
+<div class="warning"><strong>Build verde mas a página quebra em produção:</strong> variável de ambiente faltando (só existia no <code>.env.local</code> dela) ou código que só funciona com <code>window</code> no SSR. A Vercel mostra o erro em Runtime Logs:</div>
+<pre class="out">Error: process.env.NEXT_PUBLIC_API_URL is undefined
+→ set a variável em Vercel → Settings → Environment Variables
+  (Production + Preview) e faça um redeploy.</pre>
+<h2>Exercícios</h2>
+<div class="mc" data-answer="2"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">Depois de conectar o GitHub na Vercel, o que dispara um deploy de <strong>produção</strong>?</p><label><input type="radio" name="q1">Qualquer commit em qualquer branch</label><label><input type="radio" name="q1">O push/merge na branch <code>main</code> (configurada como producción)</label><label><input type="radio" name="q1">Um clique manual todo dia</label></div>
+<div class="mc" data-answer="1"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">Uma branch nova com uma feature em teste ganha:</p><label><input type="radio" name="q2">Um <strong>preview deployment</strong> com URL própria (ex.: meu-app-git-feature-ana.vercel.app)</label><label><input type="radio" name="q2">Nada, só a main publica</label><label><input type="radio" name="q2">Um domínio próprio novo</label></div>
+<div class="mc" data-answer="3"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">Se o build falhar na Vercel, o que acontece com a produção atual?</p><label><input type="radio" name="q3">O site sai do ar imediatamente</label><label><input type="radio" name="q3">O deploy novo entra mesmo com erro</label><label><input type="radio" name="q3">Nada muda: a versão anterior segue no ar; só dá para publicar se o build passar inteiro</label></div>
+<div class="exercise" data-answer="push"><p>Complete o comando de push que manda o código para o GitHub:</p><div class="ex-code">git <input class="ex-input" autocomplete="off" spellcheck="false" autocapitalize="off"> origin main</div><div class="ex-actions"><button type="button">Verificar</button><span class="ex-result" aria-live="polite"></span></div></div>
+<div class="exercise" data-answer="--prod"><p>Complete o comando da CLI que publica direto em produção:</p><div class="ex-code">vercel <input class="ex-input" autocomplete="off" spellcheck="false" autocapitalize="off"></div><div class="ex-actions"><button type="button">Verificar</button><span class="ex-result" aria-live="polite"></span></div></div>
+<div class="pager"></div>
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

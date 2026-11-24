@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aprenda Next.js do zero ao avançado, com o app rodando na página | Guia Next.js</title>
+<meta name="description" content="Guia de Next.js em português para quem já sabe JavaScript e React básico e quer construir sites completos: cada página explica a ideia com uma analogia do dia a dia, mostra o código, deixa você experimentar na própria página e termina com missão e exercícios.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<div class="hero">
+<h1>Aprenda <span class="hl">Next.js</span> do zero, experimentando na hora</h1>
+<p>Um guia em português, no estilo escola: cada página ensina <strong>um conceito só</strong>, explica com uma analogia do dia a dia, mostra o código linha por linha e deixa você <strong>rodar o componente dentro da própria página</strong> — sem instalar nada para começar.</p>
+</div>
+
+<p class="intro">A Ana já sabia JavaScript e React: variáveis, funções, componentes, props e estado com <code>useState</code>. Ela conseguia fazer uma lista de tarefas que se atualizava sozinha dentro de uma página. Mas quando quis publicar o projeto de verdade, apareceram perguntas novas: <strong>como o Google vai ler o conteúdo da página?</strong> Como crio rotas como <code>/sobre</code> e <code>/blog/meu-post</code>? Onde escondo a chave secreta da API para ninguém ver? Foi aí que ela scopriu o <strong>Next.js</strong>: em vez de montar cada peça do carro na mão, ela escreve componentes React e o framework entrega o carro completo — rotas, páginas que o buscador enxerga, imagens otimizadas e deploy. Este guia existe para encurtar esse caminho para você.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>o que é o Next.js e por que ele existe (framework vs biblioteca);</li>
+  <li>App Router vs Pages Router — e por que o App Router é o padrão hoje;</li>
+  <li>a preparar o computador: Node.js, npm e o terminal;</li>
+  <li>a criar um projeto de verdade com <code>create-next-app</code> e entender cada pasta;</li>
+  <li>a transformar pastas com <code>page.tsx</code> em rotas do site;</li>
+  <li>a rodar o app local com <code>npm run dev</code> e usar o hot reload;</li>
+  <li>a usar a caixa <strong>Experimente</strong> desta página para treinar sem medo;</li>
+  <li>e, depois, layouts, <code>&lt;Link&gt;</code>, Server vs Client Components, rotas dinâmicas, data fetching e Server Actions.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>A ideia: React é o motor, Next.js é o carro completo</h2>
+<p>Imagine que o React puro é como um <strong>motor de carro</strong>: potente, mas sozinho não anda — precisa de rodas, volante, carroceria e papelada. O Next.js pega esse motor e monta o <strong>carro inteiro</strong> ao redor dele. Você continua escrevendo componentes React do jeito que já conhece, mas o framework cuida das rotas, das páginas que o Google consegue ler (renderização no servidor), das imagens que carregam rápido, das fontes e até da publicação na Vercel. Resultado: um site rápido, bem posicionado no buscador e fácil de manter.</p>
+<p>O coração do Next.js atual é o <strong>App Router</strong>: em vez de uma pasta <code>pages/</code> em que cada arquivo vira uma rota, você cria a pasta <code>app/</code> e, dentro dela, cada subpasta que contém um arquivo <code>page.tsx</code> vira uma página — <code>app/sobre/page.tsx</code> vira <code>/sobre</code>. E um arquivo <code>layout.tsx</code> numa pasta envolve todas as páginas abaixo dela com o mesmo cabeçalho e rodapé, como um <strong>molde de biscoito</strong> reutilizável. Esse é o "roteamento por arquivos" (file-based routing): a estrutura de pastas <em>é</em> o mapa do seu site.</p>
+
+<h2>Os níveis do guia</h2>
+<p>O curso é dividido em níveis, como uma escola. Cada nível tem páginas curtas, uma por assunto, na raiz deste guia:</p>
+
+<div class="cards">
+  <a class="card" href="o-que-e-nextjs.html"><strong>🌱 Nível 1 · Fundamentos</strong><span>Começando: o que é Next.js, Node, create-next-app, pastas do projeto, primeira página, rodando o app, layouts, Link, estilos e Server vs Client Components.</span></a>
+  <a class="card" href="rotas-dinamicas.html"><strong>🛠️ Nível 2 · Intermediário</strong><span>Rotas dinâmicas, generateStaticParams, catch-all, fetch no servidor, cache, Server Actions, formulários, API Routes, middleware e cookies/sessões.</span></a>
+  <a class="card" href="ssr-ssg-isr.html"><strong>🚀 Nível 3 · Avançado</strong><span>SSR, SSG e ISR, streaming com Suspense, partial prerendering, imagens e fontes otimizadas, análise de bundle, performance e deploy na Vercel.</span></a>
+  <a class="card" href="projeto-blog.html"><strong>🏗️ Projetos</strong><span>Apps completos passo a passo: blog, loja, dashboard, SaaS e portfólio.</span></a>
+  <a class="card" href="ref-estructura.html"><strong>📚 Referência</strong><span>Consulta rápida na hora da dúvida: estrutura de pastas, data fetching, next.config, erros comuns traduzidos e glossário.</span></a>
+</div>
+
+<p>Comece pelo <strong>Nível 1</strong>, na ordem: <a href="o-que-e-nextjs.html">O que é Next.js</a> → <a href="app-vs-pages.html">App vs Pages Router</a> → <a href="instalando.html">Instalando o Node</a> → <a href="criar-projeto.html">Criando o projeto</a> → <a href="estrutura-pastas.html">As pastas</a> → <a href="primeira-pagina.html">Primeira página</a> → <a href="rodando.html">Rodando o app</a> → <a href="layout.html">Layout raiz</a> → <a href="page.html">Páginas (page.jsx)</a> → <a href="navegacao-link.html">Navegação com Link</a> → <a href="estilos-css.html">Estilos e CSS</a> → <a href="fontes-imagens.html">Fontes e imagens</a> → <a href="server-client.html">Server vs Client</a> → <a href="componentes.html">Componentes</a> → <a href="props.html">Props</a>.</p>
+
+<h2>Experimente agora mesmo</h2>
+<p>Toda caixa <strong>Experimente</strong> deste guia é um mini editor de código React vivo: o código fica dentro de uma caixa editável e, ao clicar em <strong>▶ Rodar</strong>, o navegador compila o JSX na hora (com o Babel) e renderiza o componente com o <strong>React 19</strong> dentro de um quadradinho logo abaixo — o mesmo React que o Next.js usa por dentro das páginas dele. Você pode editar à vontade: se estragar, é só clicar em <strong>↺ Restaurar</strong>. O botão <strong>✔ Verificar missão</strong> confere se o seu código bate com o objetivo.</p>
+
+<div class="tryreact" data-goal="Somar \\+1">
+<p class="try-task"><strong>Missão:</strong> mude o texto do botão de "Clique em mim" para <strong>"Somar +1"</strong>. Depois clique em ▶ Rodar e em ✔ Verificar missão.</p>
+<pre class="script" data-file="App.jsx">function App() {
+  // useState cria uma "caixinha de memória" dentro do componente:
+  // cliques começa em 0 e setCliques é a função que muda o valor dela.
+  const [cliques, setCliques] = React.useState(0);
+
+  return (
+    &lt;div style={{ textAlign: "center", padding: 24, fontFamily: "sans-serif" }}&gt;
+      &lt;h1&gt;Olá! Eu sou um componente React.&lt;/h1&gt;
+      &lt;p&gt;Você clicou {cliques} vezes.&lt;/p&gt;
+      {/* onClick recebe a FUNÇÃO, não a chamada: setCliques(cliques + 1) */}
+      &lt;button onClick={() =&gt; setCliques(cliques + 1)}&gt;
+        Clique em mim
+      &lt;/button&gt;
+    &lt;/div&gt;
+  );
+}</pre>
+<pre class="solucao" data-file="App.jsx">function App() {
+  const [cliques, setCliques] = React.useState(0);
+
+  return (
+    &lt;div style={{ textAlign: "center", padding: 24, fontFamily: "sans-serif" }}&gt;
+      &lt;h1&gt;Olá! Eu sou um componente React.&lt;/h1&gt;
+      &lt;p&gt;Você clicou {cliques} vezes.&lt;/p&gt;
+      &lt;button onClick={() =&gt; setCliques(cliques + 1)}&gt;
+        Somar +1
+      &lt;/button&gt;
+    &lt;/div&gt;
+  );
+}</pre>
+</div>
+
+<h2>Como cada página deste guia funciona</h2>
+<p>Todas as páginas seguem o mesmo roteiro, para o seu cérebro não precisar reaprender a ler a cada aula:</p>
+<ol>
+  <li><strong>A ideia primeiro</strong> — uma analogia longa do mundo real (motor de carro, molde de biscoito, fichário) antes de qualquer código;</li>
+  <li><strong>Você vai aprender</strong> — um resumo em caixa amarela do que sai daquela página;</li>
+  <li><strong>O código</strong> — em blocos escuros com o nome do arquivo (<code>page.tsx</code>, <code>layout.tsx</code>…), comentado linha por linha quando é código novo;</li>
+  <li><strong>Experimente</strong> — a caixa editável com missão e gabarito;</li>
+  <li><strong>Quando dá errado</strong> — um erro comum cometido de propósito, com a mensagem real que aparece;</li>
+  <li><strong>Exercícios</strong> — perguntas de múltipla escolha que conferem na hora e um "complete o código".</li>
+</ol>
+
+<h2>Quando dá errado</h2>
+<p>Errar faz parte: o editor da caixa Experimente mostra o erro em português, embaixo do código. O erro mais comum de quem está começando em JSX é <strong>esquecer de fechar uma tag</strong>. A Ana vez ou outra esquecia o <code>&lt;/h1&gt;</code> e o componente simplesmente não aparecia:</p>
+<div class="warning"><strong>Erro comum:</strong> tag JSX aberta sem fechar. O navegador não mostra nada na tela — em vez disso, a caixa de erro aparece com a mensagem do compilador.</div>
+<pre class="file" data-file="app/page.tsx">export default function Pagina() {
+  return (
+    &lt;div&gt;
+      &lt;h1&gt;Olá, mundo!
+      &lt;p&gt;Esqueci de fechar o h1 acima...&lt;/p&gt;
+    &lt;/div&gt;
+  );
+}</pre>
+<pre class="out">⚠ SyntaxError: page.tsx: Expected corresponding JSX closing tag for &lt;h1&gt;.
+   Toda tag aberta precisa de uma tag fechando: escreva &lt;/h1&gt; depois do texto.</pre>
+
+<h2>Exercícios</h2>
+<div class="mc" data-answer="2"><p class="mc-q">O que é o Next.js, afinal?</p><label><input type="radio" name="q1"> Uma linguagem de programação nova, que substitui o JavaScript</label><label><input type="radio" name="q1"> Um framework React que adiciona rotas, renderização no servidor, otimizações e deploy</label><label><input type="radio" name="q1"> Um banco de dados para guardar sites</label><label><input type="radio" name="q1"> Um navegador web feito pela Vercel</label></div>
+
+<div class="mc" data-answer="3"><p class="mc-q">Na caixa Experimente desta página, onde o código roda de verdade?</p><label><input type="radio" name="q2"> No servidor do site do guia</label><label><input type="radio" name="q2"> Em um arquivo salvo no seu computador</label><label><input type="radio" name="q2"> No seu próprio navegador, dentro de um quadradinho isolado (iframe)</label><label><input type="radio" name="q2"> Na nuvem da Vercel</label></div>
+
+<div class="mc" data-answer="1"><p class="mc-q">No App Router, o que vira uma rota (uma página) do site?</p><label><input type="radio" name="q3"> Uma pasta dentro de <code>app/</code> que contém um arquivo <code>page.tsx</code></label><label><input type="radio" name="q3"> Um arquivo chamado <code>route.js</code> dentro de <code>pages/</code></label><label><input type="radio" name="q3"> Qualquer imagem <code>.png</code> dentro de <code>public/</code></label><label><input type="radio" name="q3"> Um componente com <code>export default</code> em qualquer lugar do projeto</label></div>
+
+<div class="exercise"><h2>Complete o código</h2><div class="ex-code">const [cliques, setCliques] = <input data-answer="React.useState(0)|useState(0)">;</div></div>
+
+<div class="pager"></div>
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

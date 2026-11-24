@@ -1,0 +1,106 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grupos de rotas (grupo)/layout | Guia Next.js</title><meta name="description" content="Aprenda a usar pastas entre parênteses no App Router do Next.js para organizar rotas que compartilham o mesmo layout sem que o nome do grupo vire parte da URL.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
+<div class="pager"></div>
+<h1>Grupos de rotas <code>(grupo)</code></h1>
+<p class="intro">A Ana 👩‍💻 estava montando um site com duas "áreas": a <strong>loja</strong> (home, produto, carrinho) e o <strong>marketing</strong> (sobre, contato). Ela queria um layout diferente para cada área — cabeçalho de loja num lado, institucional do outro — mas não queria que a URL ficasse <code>/loja/produto/1</code>. A solução foram as pastas entre <strong>parênteses</strong>: <code>(shop)</code> e <code>(marketing)</code>.</p>
+<div class="note"><strong>Você vai aprender</strong><ul><li>Por que <code>(nome)</code> organiza o projeto sem virar URL</li><li>Dar um <code>layout.jsx</code> exclusivo para um grupo de rotas</li><li>Ter vários layouts raiz (um por grupo) no mesmo app</li><li>Nomear rotas iguais em grupos diferentes sem conflito</li></ul></div>
+<hr><h2>A ideia: pastas com nome de sala, não de endereço</h2>
+<p>Imagine um prédio comercial: no térreo há duas recepções — uma da loja, uma do coworking. Cada recepcionista (cada <code>layout.jsx</code>) atende só quem entra pela porta dela, mas o <strong>endereço do prédio não muda</strong>: não existe rua chamada "recepção-da-loja". A pasta <code>(shop)</code> funciona assim: ela existe no disco, organiza os arquivos e carrega o layout do grupo, mas o texto entre parênteses <strong>nunca aparece na URL</strong>.</p>
+<p>É por isso que dá para ter <code>app/(shop)/page.jsx</code> e <code>app/(marketing)/page.jsx</code> ao mesmo tempo: ambas respondem por <code>/</code>? Não — dá conflito, e o Next.js avisa. O truque é que dentro de cada grupo você pode repetir nomes de rota livremente: <code>(shop)/produto/[id]/page.jsx</code> vira <code>/produto/1</code>, e <code>(marketing)/produto/page.jsx</code> (uma página "sobre o produto") também poderia existir sem bater boca, porque os caminhos completos são diferentes.</p>
+<p>E o layout? Cada grupo pode ter o seu próprio <code>layout.jsx</code>, que envolve só as páginas daquele grupo — o layout raiz <code>app/layout.jsx</code> continua envolvendo tudo por fora. Resultado: a loja usa cabeçalho de loja, o marketing usa cabeçalho institucional, e a URL continua limpa.</p>
+<h2>Na prática: loja + marketing no mesmo app</h2>
+<pre class="file" data-file="estrutura de pastas">app/
+├─ layout.jsx                  ← layout raiz (html, body, fonte…)
+├─ (shop)/                     ← grupo: NÃO vira URL
+│   ├─ layout.jsx              ← layout só da loja (header 🛒)
+│   ├─ page.jsx                →  /            (home da loja)
+│   ├─ produto/[id]/page.jsx   →  /produto/1
+│   └─ carrinho/page.jsx       →  /carrinho
+└─ (marketing)/                ← outro grupo
+    ├─ layout.jsx              ← layout institucional
+    └─ sobre/page.jsx          →  /sobre</pre>
+<pre class="file" data-file="app/(shop)/layout.jsx">export default function ShopLayout({ children }) {
+  return (
+    &lt;div&gt;
+      &lt;header&gt;🛒 Minha Loja — frete grátis acima de R$ 99&lt;/header&gt;
+      &lt;main&gt;{children}&lt;/main&gt;
+      &lt;footer&gt;© Loja da Ana&lt;/footer&gt;
+    &lt;/div&gt;
+  );
+}</pre>
+<pre class="file" data-file="app/(marketing)/layout.jsx">export default function MarketingLayout({ children }) {
+  return (
+    &lt;div&gt;
+      &lt;header&gt;🏠 Sobre nós&lt;/header&gt;
+      &lt;main&gt;{children}&lt;/main&gt;
+    &lt;/div&gt;
+  );
+}</pre>
+<p>Repare que <code>(shop)/page.jsx</code> responde à URL <code>/</code>: o grupo some do caminho. Se duas rotas finais iguais existirem em grupos diferentes (ex: <code>(a)/sobre/page.jsx</code> e <code>(b)/sobre/page.jsx</code>), aí sim o Next.js reclama no build com erro de rota duplicada — nesse caso é só dar nomes diferentes ou mover uma para fora do grupo.</p>
+<table class="ref">
+<tr><th>Convenção</th><th>Exemplo</th><th>URL resultante</th></tr>
+<tr><td>Pasta entre parênteses</td><td><code>app/(shop)/carrinho/page.jsx</code></td><td><code>/carrinho</code> (o grupo some)</td></tr>
+<tr><td>Layout por grupo</td><td><code>app/(shop)/layout.jsx</code></td><td>envolve só as páginas de <code>(shop)</code></td></tr>
+<tr><td>Vários grupos com mesma rota interna</td><td><code>(a)/page.jsx</code> + <code>(b)/page.jsx</code></td><td>❌ conflito — ambas tentam ser <code>/</code></td></tr>
+<tr><td>Pasta privada</td><td><code>app/_rascunho/page.jsx</code></td><td>não vira rota (underline = excluída do roteamento)</td></tr>
+<tr><td>Pasta de rota paralela</td><td><code>app/@modal/page.jsx</code></td><td>slot nomeado para <code>@modal</code> (parallel routes)</td></tr>
+</table>
+<div class="tryreact" data-goal="grupo ===|grupo =="><p class="try-task"><strong>Missão:</strong> a Ana separou as abas em dois "grupos" (loja 🛒 e marketing 🏠). Complete a função <code>rotasDoGrupo</code> para devolver só as rotas daquele grupo, comparando <code>rota.grupo</code> com o <code>grupo</code> recebido. Rode com os dois botões.</p><pre class="script" data-file="App.jsx">function App() {
+  const rotas = [
+    { caminho: "/", grupo: "shop", nome: "Home da loja" },
+    { caminho: "/carrinho", grupo: "shop", nome: "Carrinho" },
+    { caminho: "/sobre", grupo: "marketing", nome: "Sobre nós" },
+  ];
+  const [grupo, setGrupo] = React.useState("shop");
+
+  // 👉 devolva só as rotas cujo grupo bate com `grupo`
+  const rotasDoGrupo = [];
+
+  return (
+    &lt;div style={{ fontFamily: "sans-serif", padding: 16 }}&gt;
+      &lt;button onClick={() =&gt; setGrupo("shop")}&gt;🛒 loja&lt;/button&gt;
+      &lt;button onClick={() =&gt; setGrupo("marketing")}&gt;🏠 marketing&lt;/button&gt;
+      &lt;ul&gt;
+        {rotasDoGrupo.map((r) =&gt; (
+          &lt;li key={r.caminho}&gt;{r.caminho} — {r.nome}&lt;/li&gt;
+        ))}
+      &lt;/ul&gt;
+    &lt;/div&gt;
+  );
+}</pre><pre class="solucao" data-file="App.jsx">function App() {
+  const rotas = [
+    { caminho: "/", grupo: "shop", nome: "Home da loja" },
+    { caminho: "/carrinho", grupo: "shop", nome: "Carrinho" },
+    { caminho: "/sobre", grupo: "marketing", nome: "Sobre nós" },
+  ];
+  const [grupo, setGrupo] = React.useState("shop");
+
+  const rotasDoGrupo = rotas.filter((r) => r.grupo === grupo);
+
+  return (
+    &lt;div style={{ fontFamily: "sans-serif", padding: 16 }}&gt;
+      &lt;button onClick={() =&gt; setGrupo("shop")}&gt;🛒 loja&lt;/button&gt;
+      &lt;button onClick={() =&gt; setGrupo("marketing")}&gt;🏠 marketing&lt;/button&gt;
+      &lt;ul&gt;
+        {rotasDoGrupo.map((r) =&gt; (
+          &lt;li key={r.caminho}&gt;{r.caminho} — {r.nome}&lt;/li&gt;
+        ))}
+      &lt;/ul&gt;
+    &lt;/div&gt;
+  );
+}</pre></div>
+<figure class="tela"><img src="assets/telas/grupos-rotas.png" alt="Estrutura de pastas mostrando (shop) e (marketing) com layouts próprios, sem virar URL" width="1280" height="800" loading="lazy"><figcaption><code>(shop)/produto/[id]</code> vira <code>/produto/1</code>: o nome do grupo organiza o código, mas não aparece no endereço.</figcaption></figure>
+<h2>Quando dá errado</h2>
+<div class="warning"><strong>Erro:</strong> criar duas rotas finais iguais em grupos diferentes. É o erro mais comum de grupo:</div>
+<pre class="out">Error: You cannot use different slug names for the same dynamic path ("id" !== "slug").
+// ou, no caso de grupos:
+Error: You cannot have two parallel pages that resolve to the same path! /page — (a)/page.jsx and (b)/page.jsx</pre>
+<p>Tradução: duas páginas paralelas resolvem para o mesmo caminho. <strong>Correção:</strong> renomeie uma das rotas ou tire uma delas do grupo. Se a ideia era realmente duas páginas "iguais" para públicos diferentes, o caminho certo é uma rota dinâmica (<code>/[lang]/page.jsx</code>) ou conteúdo condicional — não dois grupos com a mesma rota final.</p>
+<h2>Exercícios</h2>
+<div class="mc" data-answer="3"><p class="mc-q">1. Qual URL a página <code>app/(shop)/carrinho/page.jsx</code> atende?</p><label><input type="radio">/(shop)/carrinho</label><label><input type="radio">/shop/carrinho</label><label><input type="radio">/carrinho</label><label><input type="radio">/(shop)carrinho</label><p class="mc-feedback"></p></div>
+<div class="mc" data-answer="1"><p class="mc-q">2. O que acontece se <code>app/(shop)/layout.jsx</code> e <code>app/(marketing)/layout.jsx</code> existirem juntos?</p><label><input type="radio">Cada um envolve só as páginas do seu grupo</label><label><input type="radio">O Next.js dá erro e não deixa ter dois layouts</label><label><input type="radio">Só o layout raiz pode existir</label><label><input type="radio">O segundo layout sobrescreve o primeiro</label><p class="mc-feedback"></p></div>
+<div class="exercise" data-answer="_"><p><strong>3. Complete:</strong> qual prefixo de pasta cria uma pasta <em>privada</em>, que o roteador ignora?</p><div class="ex-code"><input class="ex-input" type="text" placeholder="ex: app/___rascunho" style="width:100%"></div><div class="ex-actions"><button type="button">Verificar</button></div><p class="ex-result"></p></div>
+<div class="pager"></div></div></main></div><script src="assets/site.js"></script></body></html>

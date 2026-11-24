@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projeto: Blog com SSG, markdown e rotas dinâmicas | Guia Next.js</title>
+<meta name="description" content="Projeto guiado completo: um blog em Next.js com posts em arquivos markdown, SSG com generateStaticParams, generateMetadata para SEO por post, rota dinâmica /blog/[slug] e revalidate (ISR) para publicar post novo sem rebuild.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+<div class="pager"></div>
+<h1>Projeto: Blog com SSG, markdown e rotas dinâmicas</h1>
+<p class="intro">A Ana escribe seus textos em arquivos <code>.md</code> (markdown) na pasta <code>posts/</code>. Hoje ela vai transformar isso num blog de verdade: cada post vira uma página estática (<code>/blog/meu-post</code>) gerada no build, com SEO próprio (título e descrição por post) e com ISR — dá para publicar um post novo só adicionando o arquivo, sem rebuild manual.</p>
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li><code>npx create-next-app@latest</code> com App Router e JavaScript</li>
+<li>Ler markdown do disco com <code>fs</code> + <code>path</code> (só no servidor!)</li>
+<li><code>generateStaticParams()</code> + <code>export const revalidate = 3600</code> (ISR)</li>
+<li><code>generateMetadata()</code> para título/description/OpenGraph por post</li>
+<li>Renderizar markdown com <code>marked</code> (ou <code>next-mdx-remote</code>)</li>
+</ul></div>
+<hr>
+<h2>A ideia: a gráfica que imprime o jornal inteiro no automático</h2>
+<p>Um blog estático é como uma gráfica que imprime o jornal inteiro durante a madrugada: quando o primeiro leitor chega de manhã, todas as páginas já estão prontas e idênticas para todo mundo — o servidor só entrega o papel (rápido e barato). O slug da URL (<code>/blog/como-fazer-bolo</code>) é o nome na capa de cada exemplar. Com o ISR, a gráfica religa sozinha de hora em hora para incluir as notícias novas — sem reimprimir o jornal inteiro.</p>
+<p>O markdown entra como a <strong>matéria-prima</strong>: arquivos <code>.md</code> com um cabeçalho (frontmatter: título, data, resumo) e o corpo do texto. No build, o Next.js lê esses arquivos do disco (isso só pode acontecer no servidor, por isso usamos Server Components), converte para HTML e gera uma página estática por post. O SEO de cada post vem do <code>generateMetadata</code>, que devolve <code>&lt;title&gt;</code> e <code>description</code> próprios.</p>
+<h2>Passo 1 — criar o projeto e a pasta de posts</h2>
+<pre class="file" data-file="terminal">npx create-next-app@latest blog-da-ana
+# perguntas: TypeScript? No · ESLint? Yes · Tailwind? No · src/? No · App Router? Yes · import alias? No
+cd blog-da-ana
+npm run dev</pre>
+<pre class="file" data-file="posts/primeiro-post.md">---
+titulo: "Meu primeiro post"
+data: "2025-01-10"
+resumo: "Como montei meu blog com Next.js em uma tarde."
+---
+
+## Olá, mundo!
+
+Este é o **primeiro post** do blog da Ana. Ele vive num arquivo `.md` e virou
+uma página estática em `/blog/primeiro-post`.</pre>
+<pre class="file" data-file="posts/segundo-post.md">---
+titulo: "SSG vs SSR na prática"
+data: "2025-01-15"
+resumo: "Quando gerar no build e quando gerar na hora."
+---
+
+Explico aqui a diferença entre **SSG** e **SSR** com exemplos do blog.</pre>
+<h2>Passo 2 — a biblioteca que lê os posts (só servidor)</h2>
+<pre class="file" data-file="lib/posts.js">import fs from 'fs';
+import path from 'path';
+import { marked } from 'marked';
+
+const PASTA = path.join(process.cwd(), 'posts');
+
+function lerFrontmatter(texto) {
+  const m = texto.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+  const dados = {};
+  m[1].split('\n').forEach(l =&gt; {
+    const [k, ...v] = l.split(':');
+    dados[k.trim()] = v.join(':').trim().replace(/^"|"$/g, '');
+  });
+  return { dados, corpo: m[2] };
+}
+
+export function listarPosts() {
+  return fs.readdirSync(PASTA)
+    .filter(f =&gt; f.endsWith('.md'))
+    .map(f =&gt; {
+      const slug = f.replace(/\.md$/, '');
+      const { dados } = lerFrontmatter(fs.readFileSync(path.join(PASTA, f), 'utf8'));
+      return { slug, ...dados };
+    })
+    .sort((a, b) =&gt; b.data.localeCompare(a.data));
+}
+
+export function pegarPost(slug) {
+  const texto = fs.readFileSync(path.join(PASTA, slug + '.md'), 'utf8');
+  const { dados, corpo } = lerFrontmatter(texto);
+  return { slug, ...dados, html: marked.parse(corpo) };
+}</pre>
+<pre class="file" data-file="terminal">npm install marked</pre>
+<h2>Passo 3 — a home com a lista (SSG)</h2>
+<pre class="file" data-file="app/page.jsx">import Link from 'next/link';
+import { listarPosts } from '@/lib/posts';
+
+export const revalidate = 3600; // ISR: a home recria a cada 1h (posts novos entram sozinhos)
+
+export default function Home() {
+  const posts = listarPosts();
+  return (
+    &lt;main&gt;
+      &lt;h1&gt;📰 Blog da Ana&lt;/h1&gt;
+      &lt;ul&gt;
+        {posts.map(p =&gt; (
+          &lt;li key={p.slug}&gt;
+            &lt;Link href={`/blog/${p.slug}`}&gt;{p.titulo}&lt;/Link&gt;
+            &lt;small&gt; — {p.data}: {p.resumo}&lt;/small&gt;
+          &lt;/li&gt;
+        ))}
+      &lt;/ul&gt;
+    &lt;/main&gt;
+  );
+}</pre>
+<h2>Passo 4 — a página do post (rota dinâmica estática + SEO)</h2>
+<pre class="file" data-file="app/blog/[slug]/page.jsx">import { listarPosts, pegarPost } from '@/lib/posts';
+import { notFound } from 'next/navigation';
+
+export const revalidate = 3600; // ISR também aqui
+
+// gera /blog/primeiro-post, /blog/segundo-post… no build
+export async function generateStaticParams() {
+  return listarPosts().map(p =&gt; ({ slug: p.slug }));
+}
+
+export const dynamicParams = true; // post novo (fora do build) ainda abre na hora (SSR) e depois vira estático
+
+// SEO por post: título e description próprios no &lt;head&gt;
+export async function generateMetadata({ params }) {
+  const { slug } = await params;
+  const post = pegarPost(slug);
+  if (!post) return {};
+  return {
+    title: `${post.titulo} | Blog da Ana`,
+    description: post.resumo,
+    openGraph: { title: post.titulo, description: post.resumo },
+  };
+}
+
+export default async function PaginaPost({ params }) {
+  const { slug } = await params; // Next.js 15: params é Promise
+  let post;
+  try { post = pegarPost(slug); } catch { notFound(); }
+  return (
+    &lt;article&gt;
+      &lt;h1&gt;{post.titulo}&lt;/h1&gt;
+      &lt;small&gt;{post.data}&lt;/small&gt;
+      &lt;div dangerouslySetInnerHTML={{ __html: post.html }} /&gt;
+    &lt;/article&gt;
+  );
+}</pre>
+<pre class="file" data-file="app/blog/[slug]/not-found.jsx">export default function NotFound() {
+  return &lt;p&gt;😕 Post não encontrado. &lt;a href="/"&gt;Voltar ao blog&lt;/a&gt;&lt;/p&gt;;
+}</pre>
+<figure class="tela"><img src="assets/telas/proj-blog.png" alt="Blog estático com lista de posts e página de post" width="1280" height="800" loading="lazy"><figcaption>Home estática listando os posts e a página /blog/[slug] gerada no build com SEO próprio.</figcaption></figure>
+<div class="tryreact" data-goal="generateStaticParams"><p class="try-task"><strong>Missão:</strong> no código abaixo, a rota dinâmica está comentada. Complete a função <code>generateStaticParams()</code> para devolver <code>[{ slug: 'primeiro-post' }, { slug: 'segundo-post' }]</code> a partir da lista — é ela que faz o Next.js gerar as páginas estáticas no build. Rode e clique em <em>Verificar missão</em>.</p><pre class="script" data-file="app/blog/[slug]/page.jsx">const POSTS = [
+  { slug: 'primeiro-post', titulo: 'Meu primeiro post' },
+  { slug: 'segundo-post', titulo: 'SSG vs SSR na prática' },
+];
+
+// TODO: export async function generateStaticParams() {
+//   return POSTS.map(p =&gt; ({ slug: p.slug }));
+// }
+
+function App() {
+  return (
+    &lt;div&gt;
+      &lt;h1&gt;📰 Blog&lt;/h1&gt;
+      &lt;ul&gt;{POSTS.map(p =&gt; &lt;li key={p.slug}&gt;/blog/{p.slug} — {p.titulo}&lt;/li&gt;)}&lt;/ul&gt;
+    &lt;/div&gt;
+  );
+}</pre><pre class="solucao" data-file="app/blog/[slug]/page.jsx">const POSTS = [
+  { slug: 'primeiro-post', titulo: 'Meu primeiro post' },
+  { slug: 'segundo-post', titulo: 'SSG vs SSR na prática' },
+];
+
+async function generateStaticParams() {
+  return POSTS.map(p =&gt; ({ slug: p.slug })); // gera /blog/primeiro-post, /blog/segundo-post…
+}
+
+function App() {
+  return (
+    &lt;div&gt;
+      &lt;h1&gt;📰 Blog&lt;/h1&gt;
+      &lt;ul&gt;{POSTS.map(p =&gt; &lt;li key={p.slug}&gt;/blog/{p.slug} — {p.titulo}&lt;/li&gt;)}&lt;/ul&gt;
+    &lt;/div&gt;
+  );
+}</pre></div>
+<h2>Quando dá errado</h2>
+<div class="warning"><strong>Erro real de produção:</strong> o slug novo dá 404 em produção mas funciona em dev. A causa: <code>dynamicParams = false</code> com <code>generateStaticParams</code> — fora da lista não gera nada. Com <code>dynamicParams = true</code> (padrão), o post novo cai no SSR na hora e vira estático depois do revalidate:</div>
+<pre class="out">GET /blog/post-novo → 404 in production (dynamicParams = false)
+→ mude para `export const dynamicParams = true` (ou rode o build de novo)</pre>
+<div class="warning"><strong>Outro clássico:</strong> ler a pasta <code>posts/</code> num Client Component (<code>'use client'</code>) — o <code>fs</code> não existe no navegador e o build quebra:</div>
+<pre class="out">Module not found: Can't resolve 'fs'
+→ a leitura de arquivos só pode acontecer em Server Component / lib usada pelo servidor</pre>
+<h2>Exercícios</h2>
+<div class="mc" data-answer="2"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">Para gerar no build as páginas <code>/blog/primeiro-post</code> etc., a rota dinâmica exporta:</p><label><input type="radio" name="q1"><code>getStaticPaths()</code> (isso é Pages Router antigo)</label><label><input type="radio" name="q1"><code>generateStaticParams()</code> devolvendo <code>[{ slug }]</code></label><label><input type="radio" name="q1"><code>export const slugs = [...]</code></label></div>
+<div class="mc" data-answer="1"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">O SEO (título e descrição) de cada post vem de:</p><label><input type="radio" name="q2"><code>export async function generateMetadata({ params })</code></label><label><input type="radio" name="q2">Um <code>&lt;title&gt;</code> fixo no layout</label><label><input type="radio" name="q2">Um arquivo robots.txt</label></div>
+<div class="mc" data-answer="3"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">Para publicar um post novo sem rebuild (ISR), basta:</p><label><input type="radio" name="q3">Apagar o .next</label><label><input type="radio" name="q3">Reiniciar o computador</label><label><input type="radio" name="q3">Adicionar o .md na pasta posts/ — com revalidate, a página nova entra sozinha</label></div>
+<div class="exercise" data-answer="[slug]"><p>Complete a rota dinâmica do post:</p><div class="ex-code">app/blog/<input class="ex-input" autocomplete="off" spellcheck="false" autocapitalize="off">/page.jsx</div><div class="ex-actions"><button type="button">Verificar</button><span class="ex-result" aria-live="polite"></span></div></div>
+<div class="exercise" data-answer="fs"><p>Complete a opções do markdown seguro no servidor:</p><div class="ex-code">import fs from '<input class="ex-input" autocomplete="off" spellcheck="false" autocapitalize="off">'</div><div class="ex-actions"><button type="button">Verificar</button><span class="ex-result" aria-live="polite"></span></div></div>
+<div class="pager"></div>
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

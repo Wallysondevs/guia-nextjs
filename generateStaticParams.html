@@ -1,0 +1,106 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Geração estática (SSG) | Guia Next.js</title><meta name="description" content="Aprenda generateStaticParams no Next.js: pré-renderize rotas dinâmicas no build, entenda dynamicParams, revalidate e ISR, e veja no terminal quais rotas viraram estáticas.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head><body><div class="layout"><nav class="sidebar" id="sidebar"></nav><main class="main"><div class="content">
+<div class="pager"></div>
+<h1>Geração estática: <code>generateStaticParams</code></h1>
+<p class="intro">A Ana 👩‍💻 reparou que o blog dela raramente muda: os mesmos 50 posts servem para todo mundo, o dia inteiro. Em vez de montar a página a cada visita, ela decidiu <strong>construir as páginas uma única vez, no build</strong>, e servir arquivos HTML prontos — rápido como um estático, mas gerado a partir de rotas dinâmicas. Essa é a SSG com <code>generateStaticParams</code>.</p>
+<div class="note"><strong>Você vai aprender</strong><ul><li>O que <code>generateStaticParams</code> faz no <code>npm run build</code></li><li>Pré-renderizar <code>/blog/1</code>, <code>/blog/2</code>… a partir de uma lista</li><li><code>dynamicParams = false</code>: 404 para valores fora da lista</li><li>ISR: <code>export const revalidate = 60</code> para recriar a página de tempos em tempos</li></ul></div>
+<hr><h2>A ideia: imprimir o cardápio antes de abrir o restaurante</h2>
+<p>Um restaurante com cardápio fixo imprime os menus na gráfica e deixa cópias na entrada — o cliente pega na hora, sem esperar o cozinheiro. Um restaurante de pedidos sob medida prepara cada prato quando o pedido chega. O <code>generateStaticParams</code> é a gráfica: na hora do <code>npm run build</code>, o Next.js roda a sua função, pega a lista de parâmetros (os 50 posts), e <strong>já renderiza todas as páginas</strong> — <code>/blog/1</code> até <code>/blog/50</code> — salvando o HTML de cada uma no servidor.</p>
+<p>Quando alguém visita <code>/blog/7</code>, o servidor não precisa rodar código nenhum: é só entregar o arquivo pronto. É a combinação perfeita de rota dinâmica com performance de site estático. E se chegar um pedido fora do cardápio — <code>/blog/999</code>? Aí depende da configuração <code>dynamicParams</code>, que veremos já já.</p>
+<p>E quando o cardápio muda? Se a Ana publicar o post 51, ela não precisa dar build de novo na hora: com <code>export const revalidate = 60</code>, a primeira visita depois de 60 segundos gatilha uma reconstrução em segundo plano (ISR) — o visitante seguinte já pega a página nova.</p>
+<h2>Configurando a rota estática</h2>
+<p>Na mesma página dinâmica <code>app/blog/[id]/page.jsx</code>, exporte <code>generateStaticParams</code>. Ela deve devolver um array de objetos, um por rota, com as mesmas chaves de <code>params</code>:</p>
+<pre class="file" data-file="app/blog/[id]/page.jsx">async function getPosts() {
+  const res = await fetch("https://api.exemplo.com/posts");
+  return res.json(); // [{ id: "1", … }, { id: "2", … }, …]
+}
+
+// roda UMA vez no build: devolve todos os params possíveis
+export async function generateStaticParams() {
+  const posts = await getPosts();
+  return posts.map((post) => ({ id: post.id }));
+  // -> [{ id: "1" }, { id: "2" }, … { id: "50" }]
+}
+
+// false = só as rotas da lista existem; /blog/999 -> 404
+// true  = rotas novas são geradas na primeira visita (padrão)
+export const dynamicParams = false;
+
+// ISR: depois de 60s, a próxima visita recria a página em segundo plano
+export const revalidate = 60;
+
+export default async function BlogPostPage({ params }) {
+  const { id } = await params;
+  const res = await fetch(`https://api.exemplo.com/posts/${id}`);
+  const post = await res.json();
+  return &lt;h1&gt;{post.titulo}&lt;/h1&gt;;
+}</pre>
+<p>No terminal, o <code>npm run build</code> mostra cada rota gerada e marca com <code>○ (Static)</code> que aquilo é pré-renderizado:</p>
+<pre class="out">Route (app)                              Size     First Load JS
+├ ○ /blog/[id]                           1.2 kB          90 kB
+├   ├ /blog/1                            (estático)
+├   ├ /blog/2                            (estático)
+└   └ …                                  (até /blog/50)
+○  (Static)  prerendered as static HTML</pre>
+<table class="ref">
+<tr><th>Export</th><th>Onde</th><th>Efeito</th></tr>
+<tr><td><code>generateStaticParams()</code></td><td>page/layout dinâmico</td><td>roda no build e devolve <code>[{ id: "1" }, …]</code>; cada item vira uma página estática</td></tr>
+<tr><td><code>dynamicParams = false</code></td><td>segmento dinâmico</td><td>URLs fora da lista de <code>generateStaticParams</code> dão 404</td></tr>
+<tr><td><code>dynamicParams = true</code> (padrão)</td><td>segmento dinâmico</td><td>URL nova é gerada na primeira visita e guardada em cache</td></tr>
+<tr><td><code>export const revalidate = 60</code></td><td>page/layout/rota</td><td>ISR: recria a página em segundo plano após 60s</td></tr>
+<tr><td><code>export const dynamic = "force-static"</code></td><td>page</td><td>força a página inteira a ser estática (ignora <code>searchParams</code>)</td></tr>
+</table>
+<div class="tryreact" data-goal="map\("><p class="try-task"><strong>Missão:</strong> simulando o <code>generateStaticParams</code>: a partir da lista de posts, gere o array de parâmetros <code>[{ id: "1" }, { id: "2" }, …]</code> usando <code>posts.map(...)</code>. Rode e veja a lista de rotas prontas para o "build".</p><pre class="script" data-file="App.jsx">function App() {
+  const posts = [
+    { id: "1", titulo: "Primeiro post" },
+    { id: "2", titulo: "Rotas no Next" },
+    { id: "3", titulo: "Server Actions" },
+  ];
+
+  // 👉 igual ao generateStaticParams: um { id } por post
+  const params = [];
+
+  return (
+    &lt;div style={{ fontFamily: "monospace", padding: 16 }}&gt;
+      &lt;p&gt;Rotas geradas no build:&lt;/p&gt;
+      &lt;ul&gt;
+        {params.map((p) =&gt; (
+          &lt;li key={p.id}&gt;/blog/{p.id}&lt;/li&gt;
+        ))}
+      &lt;/ul&gt;
+    &lt;/div&gt;
+  );
+}</pre><pre class="solucao" data-file="App.jsx">function App() {
+  const posts = [
+    { id: "1", titulo: "Primeiro post" },
+    { id: "2", titulo: "Rotas no Next" },
+    { id: "3", titulo: "Server Actions" },
+  ];
+
+  const params = posts.map((post) => ({ id: post.id }));
+
+  return (
+    &lt;div style={{ fontFamily: "monospace", padding: 16 }}&gt;
+      &lt;p&gt;Rotas geradas no build:&lt;/p&gt;
+      &lt;ul&gt;
+        {params.map((p) =&gt; (
+          &lt;li key={p.id}&gt;/blog/{p.id}&lt;/li&gt;
+        ))}
+      &lt;/ul&gt;
+    &lt;/div&gt;
+  );
+}</pre></div>
+<figure class="tela"><img src="assets/telas/generateStaticParams.png" alt="Saída do npm run build listando /blog/1, /blog/2 e /blog/3 como rotas estáticas" width="1280" height="800" loading="lazy"><figcaption>No <code>npm run build</code>, cada item de <code>generateStaticParams</code> vira uma página estática; com <code>dynamicParams = false</code>, <code>/blog/99</code> devolve 404.</figcaption></figure>
+<h2>Quando dá errado</h2>
+<div class="warning"><strong>Erro:</strong> devolver o formato errado em <code>generateStaticParams</code>. É fácil devolver <code>["1", "2"]</code> (array de strings) em vez de <code>[{ id: "1" }, { id: "2" }]</code> (array de objetos com a chave do segmento):</div>
+<pre class="out">Error: Page "/blog/[id]" is missing "generateStaticParams()" so it cannot be used with "output: export" config.
+// ou: Invalid generateStaticParams value: expected an array of objects with keys matching the dynamic segment names, got ["1","2"]</pre>
+<p>Tradução: o valor devolvido não é um array de objetos cujas chaves batem com o nome do segmento dinâmico. <strong>Correção:</strong> devolva sempre <code>[{ id: … }, …]</code> — com a <em>mesma chave</em> usada na pasta <code>[id]</code>. Outro erro comum: ligar <code>dynamicParams = false</code> e esquecer de listar rotas novas no build — aí a rota nova dá 404 até o próximo deploy.</p>
+<h2>Exercícios</h2>
+<div class="mc" data-answer="2"><p class="mc-q">1. O que <code>generateStaticParams</code> deve devolver para a rota <code>/blog/[id]</code>?</p><label><input type="radio">Uma string com todas as URLs</label><label><input type="radio">Um array de objetos: <code>[{ id: "1" }, { id: "2" }]</code></label><label><input type="radio">Um único objeto <code>{ id: "1" }</code></label><label><input type="radio">Um número com a quantidade de páginas</label><p class="mc-feedback"></p></div>
+<div class="mc" data-answer="1"><p class="mc-q">2. Com <code>export const dynamicParams = false</code>, o que acontece com <code>/blog/999</code> se a lista só tem até o 50?</p><label><input type="radio">É gerado na primeira visita e fica em cache</label><label><input type="radio">Devolve 404</label><label><input type="radio">Redireciona para /blog</label><label><input type="radio">Dá erro 500 no servidor</label><p class="mc-feedback"></p></div>
+<div class="exercise" data-answer="export const revalidate = 60"><p><strong>3. Complete:</strong> para recriar a página em segundo plano a cada 60 segundos (ISR), qual linha você exporta na página?</p><div class="ex-code"><input class="ex-input" type="text" placeholder="escreva aqui…" style="width:100%"></div><div class="ex-actions"><button type="button">Verificar</button></div><p class="ex-result"></p></div>
+<div class="pager"></div></div></main></div><script src="assets/site.js"></script></body></html>

@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Referência: estrutura de pastas do App Router (app/) | Guia Next.js</title>
+<meta name="description" content="Mapa completo da pasta app/ do Next.js: page, layout, template, loading, error, not-found, route, default, pastas especiais [dinâmico], [...catch-all], (grupos), @paralelas, _privadas, public/, next.config.js e arquivos .env — o que cada um faz e quando usar.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+<div class="pager"></div>
+<h1>Referência: estrutura de pastas do App Router (app/)</h1>
+<p class="intro">No Next.js com App Router, <strong>pasta é rota e arquivo é comportamento</strong>. Esta página é o mapa da cidade: cada pasta especial (<code>[id]</code>, <code>(grupo)</code>, <code>@paralela</code>, <code>_privada</code>) e cada arquivo (<code>page.jsx</code>, <code>layout.jsx</code>, <code>loading.jsx</code>…) tem um papel fixo. Consulte aqui quando a rota não abre ou o layout não aplica.</p>
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>Arquivos de rota: <code>page</code>, <code>layout</code>, <code>template</code>, <code>loading</code>, <code>error</code>, <code>not-found</code>, <code>route</code>, <code>default</code></li>
+<li>Pastas especiais: <code>[id]</code> dinâmica, <code>[...slug]</code> catch-all, <code>[[...slug]]</code> opcional, <code>(grupo)</code> grupo de rota, <code>@slot</code> parallel route, <code>_pasta</code> privada</li>
+<li>Onde ficam <code>public/</code>, <code>next.config.js</code>, <code>.env*</code>, <code>middleware.js</code></li>
+<li>Árvore exemplo comentada de um projeto real</li>
+</ul></div>
+<hr>
+<h2>A ideia: o mapa de um prédio onde o andar dá a rua</h2>
+<p>Pense na pasta <code>app/</code> como um prédio: o <strong>nome do andar dá o endereço na rua</strong> (<code>app/blog/page.jsx</code> abre em <code>/blog</code>), e dentro de cada andar há arquivos com funções fixas — a <strong>portaria</strong> (<code>layout.jsx</code>, envolve tudo abaixo), a <strong>placa "aguarde"</strong> (<code>loading.jsx</code>), a <strong>página</strong> em si (<code>page.jsx</code>). Pastas entre colchetes viram <strong>endereços com número variável</strong> (<code>[id]</code>), entre parênteses não mudam a URL (<code>(marketing)</code>), com @ viram <strong>salas paralelas</strong> (renderizadas ao mesmo tempo) e com _ são <strong>salas técnicas</strong> (nunca viram rota).</p>
+<h2>Arquivos de rota (dentro de app/)</h2>
+<table class="ref"><thead><tr><th>Arquivo</th><th>O que faz</th><th>Exemplo</th></tr></thead><tbody>
+<tr><td><code>page.jsx</code></td><td>A página da rota (obrigatório para a URL existir)</td><td><code>app/blog/page.jsx</code> → <code>/blog</code></td></tr>
+<tr><td><code>layout.jsx</code></td><td>Envelope que envolve a página e tudo abaixo (estado preservado ao navegar)</td><td><code>app/layout.jsx</code> = raiz; <code>app/blog/layout.jsx</code> = só o blog</td></tr>
+<tr><td><code>template.jsx</code></td><td>Como o layout, mas <strong>remonta do zero</strong> a cada navegação</td><td>animações de entrada por página</td></tr>
+<tr><td><code>loading.jsx</code></td><td>UI de carregamento automática do segmento (usa Suspense por baixo)</td><td><code>app/dashboard/loading.jsx</code></td></tr>
+<tr><td><code>error.jsx</code></td><td>Captura erros do segmento — precisa de <code>'use client'</code></td><td><code>app/blog/error.jsx</code> com <code>reset()</code></td></tr>
+<tr><td><code>not-found.jsx</code></td><td>Página 404 do segmento (disparada por <code>notFound()</code>)</td><td><code>app/not-found.jsx</code> global</td></tr>
+<tr><td><code>route.js</code></td><td>API endpoint (não UI): <code>export async function GET(req)</code></td><td><code>app/api/og/route.js</code> → <code>/api/og</code></td></tr>
+<tr><td><code>default.jsx</code></td><td>Fallback de parallel routes (@slot) quando nenhuma rota casou</td><td>com <code>@modal</code></td></tr>
+</tbody></table>
+<h2>Pastas especiais</h2>
+<table class="ref"><thead><tr><th>Pasta</th><th>Significado</th><th>URL exemplo</th></tr></thead><tbody>
+<tr><td><code>app/blog/[slug]/page.jsx</code></td><td><strong>Dinâmica</strong>: um segmento variável (<code>params.slug</code>)</td><td><code>/blog/ola-mundo</code></td></tr>
+<tr><td><code>app/[...slug]/page.jsx</code></td><td><strong>Catch-all</strong>: casa vários segmentos</td><td><code>/docs/a/b/c</code></td></tr>
+<tr><td><code>app/[[...slug]]/page.jsx</code></td><td><strong>Catch-all opcional</strong>: casa também a raiz do pai</td><td><code>/docs</code> e <code>/docs/a/b</code></td></tr>
+<tr><td><code>app/(marketing)/page.jsx</code></td><td><strong>Grupo de rota</strong>: organiza sem mudar a URL</td><td><code>/</code> (o grupo some da URL)</td></tr>
+<tr><td><code>app/@modal/page.jsx</code></td><td><strong>Parallel route</strong> (slot): renderiza junto, em outra parte do layout</td><td>ex.: modal por cima da página</td></tr>
+<tr><td><code>app/_lib/utils.js</code></td><td><strong>Privada</strong>: o _ tira a pasta do roteamento</td><td>não vira URL — só código interno</td></tr>
+<tr><td><code>public/</code></td><td>Arquivos públicos servidos direto (não estão em app/)</td><td><code>public/logo.svg</code> → <code>/logo.svg</code></td></tr>
+</tbody></table>
+<h2>Arquivos na raiz do projeto</h2>
+<table class="ref"><thead><tr><th>Arquivo</th><th>Para que serve</th></tr></thead><tbody>
+<tr><td><code>next.config.js</code></td><td>Config do Next: <code>images.remotePatterns</code>, <code>redirects</code>, <code>experimental.ppr</code>, bundle analyzer…</td></tr>
+<tr><td><code>middleware.js</code></td><td>Roda antes de cada rota (Edge): auth, redirects, reescrita de URL — com <code>config.matcher</code></td></tr>
+<tr><td><code>.env / .env.local / .env.production</code></td><td>Variáveis de ambiente (<code>.env*.local</code> no .gitignore; só <code>NEXT_PUBLIC_</code> vai pro client)</td></tr>
+<tr><td><code>package.json</code></td><td>Scripts (<code>dev</code>, <code>build</code>, <code>start</code>), dependências e <code>engines.node</code></td></tr>
+<tr><td><code>jsconfig.json</code></td><td>Apelido de import: <code>"@/*": ["./*"]</code> → <code>import x from '@/lib/posts'</code></td></tr>
+</tbody></table>
+<h2>Árvore exemplo de projeto real</h2>
+<pre class="file" data-file="estrutura do projeto">meu-app/
+├─ app/
+│  ├─ layout.jsx            ← raiz: &lt;html&gt;, fontes, estilos globais
+│  ├─ page.jsx              ← /            (home)
+│  ├─ globals.css
+│  ├─ loading.jsx           ← fallback global de carregamento
+│  ├─ not-found.jsx         ← 404 global
+│  ├─ (marketing)/          ← grupo: não aparece na URL
+│  │  ├─ page.jsx           ← /
+│  │  └─ sobre/page.jsx     ← /sobre
+│  ├─ blog/
+│  │  ├─ page.jsx           ← /blog          (lista, ISR)
+│  │  └─ [slug]/
+│  │     ├─ page.jsx        ← /blog/:slug   (generateStaticParams + generateMetadata)
+│  │     └─ not-found.jsx
+│  ├─ dashboard/
+│  │  ├─ layout.jsx         ← menu lateral só do dashboard
+│  │  ├─ page.jsx           ← /dashboard
+│  │  └─ pedidos/page.jsx   ← /dashboard/pedidos?pagina=2
+│  ├─ api/
+│  │  └─ stripe/webhook/route.js  ← POST do Stripe (route handler)
+│  └─ actions.js            ← 'use server' (Server Actions)
+├─ components/              ← componentes reutilizáveis ('use client' quando preciso)
+├─ lib/                     ← funções de servidor (fs, prisma…)
+├─ public/                  ← imagens, fontes, favicon (servidos direto)
+├─ middleware.js            ← protege /dashboard
+├─ next.config.js
+├─ .env.local               ← secrets locais (gitignored)
+└─ package.json</pre>
+<div class="tryreact" data-goal="ARQUIVO = 'page'"><p class="try-task"><strong>Missão:</strong> a rota <code>/sobre</code> não abre porque o arquivo dentro de <code>app/sobre/</code> está com o nome errado. No código, complete a constante com o nome certo do arquivo que torna a pasta uma rota: <code>const ARQUIVO = 'page'</code>. Rode para ver a "rota" aparecer. Depois clique em <em>Verificar missão</em>.</p><pre class="script" data-file="app/sobre/">const ARQUIVO = '???'; // nome do arquivo que faz a pasta virar rota
+
+function App() {
+  const rota = ARQUIVO === 'page' ? '/sobre ✅ abre' : '/sobre ❌ 404';
+  return (
+    &lt;div&gt;
+      &lt;h1&gt;📁 app/sobre/{ARQUIVO}.jsx&lt;/h1&gt;
+      &lt;p&gt;Resultado: {rota}&lt;/p&gt;
+    &lt;/div&gt;
+  );
+}</pre><pre class="solucao" data-file="app/sobre/page.jsx">const ARQUIVO = 'page';
+
+function App() {
+  const rota = ARQUIVO === 'page' ? '/sobre ✅ abre' : '/sobre ❌ 404';
+  return (
+    &lt;div&gt;
+      &lt;h1&gt;📁 app/sobre/{ARQUIVO}.jsx&lt;/h1&gt;
+      &lt;p&gt;Resultado: {rota}&lt;/p&gt;
+    &lt;/div&gt;
+  );
+}</pre></div>
+<figure class="tela"><img src="assets/telas/ref-estructura.png" alt="Estrutura de pastas do app/ no editor" width="1280" height="800" loading="lazy"><figcaption>A pasta app/ é o mapa das rotas: cada page.jsx vira uma URL; arquivos especiais controlam layout, loading e erros.</figcaption></figure>
+<h2>Quando dá errado</h2>
+<div class="warning"><strong>Clássico:</strong> a rota não existe e o Next.js devolve 404 mesmo com a pasta criada. Quase sempre esqueceu o <code>page.jsx</code> dentro dela (pasta sem page não é rota) ou o arquivo está com extensão errada (<code>page.js</code> serve, <code>Page.jsx</code> com P maiúsculo não, em alguns sistemas):</div>
+<pre class="out">404 — app/sobre/ existe mas não tem page.jsx
+→ crie app/sobre/page.jsx (export default function …)</pre>
+<div class="warning"><strong>Outro clássico:</strong> o layout novo não envolve a página. Se o <code>layout.jsx</code> precisa receber <code>{children}</code> e você esqueceu, dá erro; e se pôs <code>layout.jsx</code> numa pasta <code>(grupo)</code>, ele vale só para as rotas daquele grupo:</div>
+<pre class="out">Error: layout.jsx must return {children} inside the JSX
+→ return &lt;html&gt;…{children}…&lt;/html&gt; no layout raiz</pre>
+<div class="warning"><strong>E a pasta privada:</strong> criar <code>app/_utils/</code> e tentar acessar <code>/_utils</code> — não dá, porque o _ tira a pasta do roteamento (é só para código interno). O mesmo vale para <code>(grupo)</code>: <code>app/(marketing)/sobre/page.jsx</code> abre em <code>/sobre</code>, não em <code>/(marketing)/sobre</code>.</div>
+<h2>Exercícios</h2>
+<div class="mc" data-answer="2"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">Qual arquivo faz a pasta virar uma rota acessível?</p><label><input type="radio" name="q1"><code>index.jsx</code></label><label><input type="radio" name="q1"><code>page.jsx</code></label><label><input type="radio" name="q1"><code>route.jsx</code></label></div>
+<div class="mc" data-answer="3"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q"><code>app/blog/[slug]/page.jsx</code> abre em:</p><label><input type="radio" name="q2"><code>/blog/[slug]</code> literal</label><label><input type="radio" name="q2"><code>/blog</code> só</label><label><input type="radio" name="q2"><code>/blog/qualquer-coisa</code> (segmento dinâmico, <code>params.slug</code>)</label></div>
+<div class="mc" data-answer="1"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">A pasta <code>app/(marketing)/sobre/page.jsx</code> gera a URL:</p><label><input type="radio" name="q3"><code>/sobre</code> (o grupo entre parênteses não entra na URL)</label><label><input type="radio" name="q3"><code>/(marketing)/sobre</code></label><label><input type="radio" name="q3"><code>/marketing/sobre</code></label></div>
+<div class="mc" data-answer="2"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">Para arquivos estáticos (imagens, fontes) acessíveis por URL, use:</p><label><input type="radio" name="q4"><code>app/public/</code></label><label><input type="radio" name="q4"><code>public/</code> na raiz do projeto</label><label><input type="radio" name="q4"><code>assets/</code> dentro de app/</label></div>
+<div class="exercise" data-answer="[slug]"><p>Complete a pasta de rota dinâmica para <code>/blog/123</code>:</p><div class="ex-code">app/blog/<input class="ex-input" autocomplete="off" spellcheck="false" autocapitalize="off">/page.jsx</div><div class="ex-actions"><button type="button">Verificar</button><span class="ex-result" aria-live="polite"></span></div></div>
+<div class="exercise" data-answer="route.js"><p>Complete o arquivo de API (sem UI) dentro de app/:</p><div class="ex-code">app/api/rota/<input class="ex-input" autocomplete="off" spellcheck="false" autocapitalize="off"></div><div class="ex-actions"><button type="button">Verificar</button><span class="ex-result" aria-live="polite"></span></div></div>
+<div class="pager"></div>
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>

@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Analisando o bundle: @next/bundle-analyzer e import dinâmico | Guia Next.js</title>
+<meta name="description" content="Veja o que está deixando seu app pesado: @next/bundle-analyzer gera um mapa de chunks, e import() dinâmico (next/dynamic) tira bibliotecas grandes (gráficos, editores) do pacote inicial, carregando só quando precisa.">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+<div class="pager"></div>
+<h1>Analisando o bundle: @next/bundle-analyzer e import dinâmico</h1>
+<p class="intro">O app da Ana estava "pesado": o primeiro carregamento levava segundos porque uma biblioteca de gráficos entrava junto com a página inicial. Nesta aula você aprende a <strong>enxergar</strong> o que pesa no pacote com o bundle analyzer e a <strong>empurrar</strong> o que é pesado para um carregamento sob demanda com import dinâmico (<code>next/dynamic</code>).</p>
+<div class="note"><strong>Você vai aprender</strong><ul>
+<li>Instalar e configurar o <code>@next/bundle-analyzer</code> (mapeia cada chunk por tamanho)</li>
+<li>Ler o gráfico: <code>vendor</code> (node_modules) vs código da página vs chunks sob demanda</li>
+<li><code>next/dynamic</code> com <code>ssr: false</code> para componentes só de cliente</li>
+<li><code>loading</code> (fallback enquanto o chunk baixa) e <code>next/script</code> para scripts de terceiros</li>
+<li>Regra prática: o First Load JS precisa caber no "orçamento" (~170 kB gzip sugerido)</li>
+</ul></div>
+<hr>
+<h2>A ideia: a mala de viagem e o guarda-roupa extra</h2>
+<p>Carregar o bundle inteiro na primeira visita é como <strong>levar a casa inteira na mala</strong>: a mala fica pesada, o avião demora para decolar e você nem usa metade das roupas. O bundle analyzer é a <strong>balança da mala</strong>: ele mostra quanto cada "roupa" (biblioteca) pesa no pacote. O import dinâmico é o <strong>guarda-roupa extra que você aluga no destino</strong>: bibliotecas grandes (gráfico, editor de texto rico, mapa) ficam num chunk separado e só baixam quando a página realmente precisa delas.</p>
+<p>No Next.js, o App Router já separa o código por rota automaticamente (cada página só baixa o que usa). O que sobra para você é tirar do pacote inicial as bibliotecas que <strong>uma minoria das páginas</strong> usa. O <code>next/dynamic</code> faz isso com <code>import()</code> por baixo dos panos: o componente vira um chunk próprio, carregado quando o componente vai aparecer — com um <code>loading</code> no lugar enquanto isso.</p>
+<h2>Instalando e rodando o analisador</h2>
+<pre class="file" data-file="terminal">npm install @next/bundle-analyzer</pre>
+<pre class="file" data-file="next.config.js">const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+});
+
+/** @type {import('next').NextConfig} */
+const nextConfig = {};
+
+module.exports = withBundleAnalyzer(nextConfig);</pre>
+<pre class="file" data-file="terminal">ANALYZE=true npm run build
+# abre sozinho no navegador: .next/analyze/client.html e server.html</pre>
+<pre class="out">Page                              Size     First Load JS
+┌ ○ /                            5.2 kB         102 kB   ← / está leve
+├ ○ /dashboard                   180 kB         340 kB   ← o gráfico entrou aqui!
+└ ○ /loja                         12 kB         114 kB
+Shared chunks (vendor): react, next, libs comuns — 87 kB</pre>
+<h2>Tirando o peso do caminho: next/dynamic</h2>
+<pre class="file" data-file="app/dashboard/page.jsx">import dynamic from 'next/dynamic';
+
+// O gráfico (biblioteca pesada) vira um chunk separado, carregado só aqui
+const Grafico = dynamic(() =&gt; import('@/components/Grafico'), {
+  ssr: false, // roda só no navegador (gráfico não faz sentido no servidor)
+  loading: () =&gt; &lt;p&gt;📊 Carregando gráfico…&lt;/p&gt;,
+});
+
+export default function Dashboard() {
+  return (
+    &lt;main&gt;
+      &lt;h1&gt;📊 Dashboard&lt;/h1&gt;
+      &lt;p&gt;Este texto aparece na hora — o gráfico vem depois.&lt;/p&gt;
+      &lt;Grafico /&gt;
+    &lt;/main&gt;
+  );
+}</pre>
+<pre class="file" data-file="app/page.jsx">import Script from 'next/script';
+
+export default function Home() {
+  return (
+    &lt;&gt;
+      &lt;h1&gt;Página leve&lt;/h1&gt;
+      {/* script de terceiro (chat, analytics) só depois da hidratação */}
+      &lt;Script src="https://cdn.chat-exemplo.com/widget.js" strategy="lazyOnload" /&gt;
+    &lt;/&gt;
+  );
+}</pre>
+<div class="tryreact" data-goal="React.lazy"><p class="try-task"><strong>Missão:</strong> no código, o componente <code>&lt;GraficoPesado /&gt;</code> está importado direto — ele "entra na mala" junto com tudo. Troque para carregamento sob demanda usando <code>const GraficoPesado = React.lazy(() =&gt; new Promise(...))</code> e envolva no <code>&lt;React.Suspense&gt;</code>. Rode: o texto aparece na hora e o "gráfico" chega 2s depois, num chunk separado. Depois clique em <em>Verificar missão</em>.</p><pre class="script" data-file="App.jsx">// no Next.js: import dynamic from 'next/dynamic';
+// dynamic(() =&gt; import('./Grafico')) ≈ React.lazy(() =&gt; import(...))
+
+function App() {
+  // TODO: const GraficoPesado = React.lazy(() =&gt; new Promise(res =&gt; setTimeout(() =&gt;
+  //   res({ default: () =&gt; &lt;p&gt;📊 Gráfico carregado (chunk separado!)&lt;/p&gt; }), 2000)));
+  const GraficoPesado = () =&gt; &lt;p&gt;📊 (aqui entraria o gráfico pesado no pacote inicial)&lt;/p&gt;;
+
+  return (
+    &lt;div&gt;
+      &lt;h1&gt;📊 Dashboard&lt;/h1&gt;
+      &lt;p&gt;✅ Este texto não espera o gráfico.&lt;/p&gt;
+      {/* TODO: envolva em &lt;React.Suspense fallback={&lt;p&gt;carregando…&lt;/p&gt;}&gt; */}
+      &lt;GraficoPesado /&gt;
+    &lt;/div&gt;
+  );
+}</pre><pre class="solucao" data-file="App.jsx">function App() {
+  const GraficoPesado = React.lazy(() =&gt; new Promise(res =&gt; setTimeout(() =&gt;
+    res({ default: () =&gt; &lt;p&gt;📊 Gráfico carregado (chunk separado!)&lt;/p&gt; }), 2000)));
+
+  return (
+    &lt;div&gt;
+      &lt;h1&gt;📊 Dashboard&lt;/h1&gt;
+      &lt;p&gt;✅ Este texto não espera o gráfico.&lt;/p&gt;
+      &lt;React.Suspense fallback={&lt;p&gt;📊 carregando…&lt;/p&gt;}&gt;
+        &lt;GraficoPesado /&gt;
+      &lt;/React.Suspense&gt;
+    &lt;/div&gt;
+  );
+}</pre></div>
+<figure class="tela"><img src="assets/telas/n3-bundle.png" alt="Mapa do bundle gerado pelo @next/bundle-analyzer" width="1280" height="800" loading="lazy"><figcaption>O bundle analyzer mostra quanto cada chunk pesa: dá para ver o gráfico inflado o First Load JS do /dashboard.</figcaption></figure>
+<h2>Quando dá errado</h2>
+<div class="warning"><strong>Erro real:</strong> usar <code>dynamic(..., { ssr: false })</code> dentro de um <strong>Server Component</strong>. O Next.js proíbe na hora — <code>ssr: false</code> só vale em Client Component:</div>
+<pre class="out">Error: ssr: false is not allowed with next/dynamic in Server Components.
+→ marque o arquivo com 'use client' OU remova o ssr: false.</pre>
+<div class="warning"><strong>Outro clássico:</strong> a biblioteca acessa <code>window</code> durante o render e quebra o SSR com "window is not defined". Solução: <code>ssr: false</code> num componente de cliente, ou cheque <code>typeof window !== 'undefined'</code>.</div>
+<pre class="out">ReferenceError: window is not defined
+    at render (node_modules/biblioteca-grafico/...)
+→ dynamic(() =&gt; import('./Grafico'), { ssr: false }) dentro de 'use client'</pre>
+<h2>Exercícios</h2>
+<div class="mc" data-answer="2"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">Para que serve o <code>@next/bundle-analyzer</code>?</p><label><input type="radio" name="q1">Para minificar o código automaticamente</label><label><input type="radio" name="q1">Para gerar um mapa visual mostrando quanto cada biblioteca/página pesa no bundle</label><label><input type="radio" name="q1">Para apagar o node_modules</label></div>
+<div class="mc" data-answer="3"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q">Uma biblioteca de gráficos de 300 kB usada só no dashboard deve ser carregada com:</p><label><input type="radio" name="q2">Import direto no topo da página inicial</label><label><input type="radio" name="q2"><code>import 'biblioteca'</code> no layout</label><label><input type="radio" name="q2"><code>dynamic(() => import('biblioteca'))</code> — chunk separado, sob demanda</label></div>
+<div class="mc" data-answer="1"><p class="mc-feedback" aria-live="polite"></p><p class="mc-q"><code>ssr: false</code> no <code>next/dynamic</code> só é permitido em:</p><label><input type="radio" name="q3">Componentes de cliente (<code>'use client'</code>)</label><label><input type="radio" name="q3">Qualquer Server Component</label><label><input type="radio" name="q3">Arquivos <code>route.js</code></label></div>
+<div class="exercise" data-answer="build"><p>Complete o comando que gera a análise do bundle:</p><div class="ex-code">ANALYZE=true npm run <input class="ex-input" autocomplete="off" spellcheck="false" autocapitalize="off"></div><div class="ex-actions"><button type="button">Verificar</button><span class="ex-result" aria-live="polite"></span></div></div>
+<div class="exercise" data-answer="false"><p>Complete a opção que tira o componente do render do servidor:</p><div class="ex-code">dynamic(() =&gt; import('./Grafico'), { ssr: <input class="ex-input" autocomplete="off" spellcheck="false" autocapitalize="off"> })</div><div class="ex-actions"><button type="button">Verificar</button><span class="ex-result" aria-live="polite"></span></div></div>
+<div class="pager"></div>
+</div>
+</main>
+</div>
+<script src="assets/site.js"></script>
+</body>
+</html>
